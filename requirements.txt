@@ -1,6 +1,8 @@
 scikit-learn
 numpy
+Pillow
 matplotlib
+opencv-python
 notebook
 scipy
 tqdm
@@ -8,3 +10,7 @@ pandas
 torch
 torchvision
 torchaudio
+torchmetrics
+DISTS-pytorch
+lpips
+brisque
