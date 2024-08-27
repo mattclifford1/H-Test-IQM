@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from .gdn import GDN
+from gdn import GDN
 
 
 # GDN from https://interdigitalinc.github.io/CompressAI/_modules/compressai/layers/gdn.html
