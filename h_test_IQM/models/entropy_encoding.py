@@ -40,7 +40,7 @@ class entropy_model:
         # self.resizer = Resize_v2((32, 32))
         # self.resizer = Resize_v2((16, 16))
 
-    def __call__(self, x, flat=True):
+    def embeddings(self, x, flat=False):
         x = self._preprocess_image(x)
         # encode
         x = x.to(self.device)
@@ -72,6 +72,10 @@ class entropy_model:
             # x = torch.nn.functional.interpolate(x.permute(0, 3, 1, 2), size=(size, size), mode='bilinear').permute(0, 2, 3, 1)
             x = self.resizer(x)
         return x
+    
+    def counts_per_emb_feature(self, x):
+        embs = self.embeddings(x, flat=True)
+
         
 
 if __name__ == '__main__':
@@ -87,7 +91,7 @@ if __name__ == '__main__':
     x = np.expand_dims(x, axis=0)
 
     # encode
-    y = model(x, flat=False)
+    y = model.embeddings(x, flat=False)
     print(y.shape)
     # print(y.shape)
 
