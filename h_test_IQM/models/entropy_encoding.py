@@ -7,7 +7,7 @@ from h_test_IQM.models.compressive_AE import EntropyLimitedModel
 
 
 class entropy_model:
-    def __init__(self, metric='mse', dist='natural', centers=2, device='cpu'):
+    def __init__(self, im_size=(128, 128), metric='mse', dist='natural', centers=2, device='cpu'):
         # checks    
         if metric not in ['mse', 'ssim', 'nlpd']:
             raise ValueError('Invalid metric, needs to be one of: mse, ssim, nlpd')
@@ -15,13 +15,13 @@ class entropy_model:
             raise ValueError('Invalid training distribution, needs to be one of: natural, uniform')
         if centers not in [2, 5]:
             raise ValueError('Invalid number of centers, needs to be one of: 2, 5')
-
+        self.centers = centers
         self.model = EntropyLimitedModel(
-            N=128, M=64, sigmoid=True, centers=centers)
+            N=128, M=64, sigmoid=True, centers=self.centers)
 
         # get weights path
         current_file = os.path.abspath(__file__)
-        name = f'{metric}-{centers}'
+        name = f'{metric}-{self.centers}'
         if dist == 'uniform':
             name += '-u'
         model_path = os.path.join(os.path.dirname(current_file), 'save_nets', f'{name}.pth')
@@ -35,12 +35,13 @@ class entropy_model:
 
         # extras
         # self.resizer = Resize_v2((256, 256))
-        self.resizer = Resize_v2((128, 128))
+        # self.resizer = Resize_v2((128, 128))
         # self.resizer = Resize_v2((64, 64))
         # self.resizer = Resize_v2((32, 32))
         # self.resizer = Resize_v2((16, 16))
+        self.resizer = Resize_v2(im_size)
 
-    def embeddings(self, x, flat=False):
+    def embeddings(self, x):
         x = self._preprocess_image(x)
         # encode
         x = x.to(self.device)
@@ -48,9 +49,6 @@ class entropy_model:
             y = self.model.encode(x)
             y_hat = self.model.quantise(y)
         y_hat = y_hat.cpu().numpy()
-        # return flattened tensor if needed
-        if flat == True:
-            y_hat = y_hat.flatten()
         return y_hat
     
     def _preprocess_image(self, x):
@@ -73,8 +71,35 @@ class entropy_model:
             x = self.resizer(x)
         return x
     
-    def counts_per_emb_feature(self, x):
-        embs = self.embeddings(x, flat=True)
+    def counts_per_emb_feature_flat(self, x):
+        # get the counts of values in the embeddings, we ignore all spacial information
+        embs = self.embeddings(x)
+        # flatten the embeddings
+        embs = embs.reshape((embs.shape[0], -1))
+        if self.centers == 2:  # can do the ratio of -1, 1
+            ones_emb = (embs==1)
+            counts = ones_emb.sum(axis=1)/ones_emb.shape[1]
+
+        # TODO: center 5
+        elif self.centers == 5:  # return all counts -2, -1, 0, 1, 2
+            counts = embs
+
+        return counts
+    
+    def counts_per_emb_feature_spacial(self, x):
+        # get the counts of values in the embeddings, using all spacial information
+        embs = self.embeddings(x)
+        # flatten the embeddings
+        embs = embs.reshape((embs.shape[0], embs.shape[1], -1))
+        if self.centers == 2:  # can do the ratio of -1, 1
+            ones_emb = (embs==1)
+            counts = ones_emb.sum(axis=2)/ones_emb.shape[2]
+
+        # TODO: center 5
+        elif self.centers == 5:  # return all counts -2, -1, 0, 1, 2
+            counts = embs
+
+        return counts
 
         
 
@@ -84,17 +109,21 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     # create model
-    model = entropy_model(metric='mse', dist='natural', centers=2)
+    model = entropy_model(metric='mse', dist='natural', centers=2, im_size=(256, 256))
 
     # create random image
     x = np.random.rand(32, 32, 3).astype(np.float32)
     x = np.expand_dims(x, axis=0)
 
     # encode
-    y = model.embeddings(x, flat=False)
-    print(y.shape)
-    # print(y.shape)
+    y = model.embeddings(x)
+    print('embeddings:', y.shape)
+    c = model.counts_per_emb_feature_flat(x)
+    print('counts flat:', c.shape)
+    c = model.counts_per_emb_feature_spacial(x)
+    print('counts spac:', c.shape)
 
-    # plot
+
+    ## plot
     # plt.imshow(x.squeeze())
     # plt.show()
