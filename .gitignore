@@ -2,6 +2,9 @@
 *.pth
 *.pt
 
+# datasets
+*/datasets/CIFAR_10/raw_data
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
