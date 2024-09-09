@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
-from percept_loss.datasets import DATA_LOADER, TOTAL_INSTANCES
-from percept_loss.datasets.proportions import get_indicies
+from h_test_IQM.datasets import DATA_LOADER, TOTAL_INSTANCES
+from h_test_IQM.datasets.proportions import get_indicies
 
 NORMALISE = (0, 1)
 

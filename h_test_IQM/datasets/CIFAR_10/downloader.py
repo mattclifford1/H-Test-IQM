@@ -6,7 +6,7 @@ import numpy as np
 from tqdm import tqdm
 from PIL import Image
 import torchvision
-from percept_loss.datasets.CIFAR_10.VARS import CIFAR_10_RAW_DATA_DIR, CIFAR_10_META_CSV, CIFAR_10_IMAGE_DIR
+from h_test_IQM.datasets.CIFAR_10.VARS import CIFAR_10_RAW_DATA_DIR, CIFAR_10_META_CSV, CIFAR_10_IMAGE_DIR
 
 
 def download_CIFAR_10(redo_download=False):

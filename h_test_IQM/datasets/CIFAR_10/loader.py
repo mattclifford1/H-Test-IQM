@@ -3,8 +3,8 @@ from tqdm import tqdm
 import pandas as pd
 import torch
 from torchvision.io import read_image
-from percept_loss.datasets.CIFAR_10.VARS import CIFAR_10_META_CSV, CIFAR_10_IMAGE_DIR
-from percept_loss.datasets.CIFAR_10.downloader import download_CIFAR_10
+from h_test_IQM.datasets.CIFAR_10.VARS import CIFAR_10_META_CSV, CIFAR_10_IMAGE_DIR
+from h_test_IQM.datasets.CIFAR_10.downloader import download_CIFAR_10
 
 
 class CIFAR_10_LOADER:
