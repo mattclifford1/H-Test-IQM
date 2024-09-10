@@ -1,0 +1,1 @@
+from h_test_IQM.pipeline.main import get_scores
