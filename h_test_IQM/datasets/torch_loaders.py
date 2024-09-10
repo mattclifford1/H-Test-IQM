@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
 from h_test_IQM.datasets import DATA_LOADER, TOTAL_INSTANCES
-from h_test_IQM.datasets.proportions import get_indicies
+from h_test_IQM.datasets.utils.proportions import get_indicies
 
 NORMALISE = (0, 1)
 
@@ -11,7 +11,12 @@ def get_preloaded(dataset='CIFAR_10', device='cpu'):
     pre_loaded_images = loader.get_images_dict()
     return pre_loaded_images
 
-def get_all_loaders(train_percept_reduce=0.5, props=[0.4, 0.3, 0.3], device='cpu', batch_size=32, pre_loaded_images=None, dataset='CIFAR_10'):
+def get_all_loaders(train_percept_reduce=0.5, 
+                    props=[0.4, 0.3, 0.3], 
+                    device='cpu', 
+                    batch_size=32, 
+                    pre_loaded_images=None, 
+                    dataset='CIFAR_10'):
     if pre_loaded_images == True:
         pre_loaded_images = get_preloaded(dataset=dataset, device=device)
     elif pre_loaded_images == None:

@@ -7,6 +7,12 @@ We want to be able to work with either numpy or torch datasets. The format for e
  - numpy: list of numpy images
  - torch: iterable DataLoader (batch, W, H, 3)
 
+ Current numpy datasets:
+  - from h_test_IQM.datasets.numpy_loaders import load_kodak
+
+Current torch datasets:
+
+
 
 ## Distortions (Optional)
 Transform image data e.g. unit noise. Will work with either numpy or torch data (return the same type)

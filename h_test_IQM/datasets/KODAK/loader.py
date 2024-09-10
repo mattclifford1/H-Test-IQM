@@ -1,11 +1,11 @@
 import os
 import glob
-from h_test_IQM.datasets.utils import load_image
+from h_test_IQM.datasets.utils.utils import load_image
 
 
 def load_kodak():
     file_path = os.path.dirname(os.path.abspath(__file__))
-    dir = os.path.join(file_path, 'KODAK-dataset')
+    dir = os.path.join(file_path, 'raw_data')
     image_list = glob.glob(os.path.join(dir, '*'))
     # remove folders
     image_list = [f for f in image_list if os.path.isfile(f)]
