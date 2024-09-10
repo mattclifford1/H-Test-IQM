@@ -8,9 +8,10 @@ We want to be able to work with either numpy or torch datasets. The format for e
  - torch: iterable DataLoader (batch, W, H, 3)
 
  Current numpy datasets:
-  - from h_test_IQM.datasets.numpy_loaders import load_kodak
+  - from h_test_IQM.datasets.numpy_loaders import kodak_loader
 
 Current torch datasets:
+  - from h_test_IQM.datasets.torch_loaders import CIFAR10_loader
 
 
 

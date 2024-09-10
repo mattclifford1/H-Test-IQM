@@ -4,6 +4,11 @@ from h_test_IQM.datasets.utils.proportions import get_indicies
 
 NORMALISE = (0, 1)
 
+
+def CIFAR10_loader(*args, **kwargs):
+    return get_all_loaders(*args, **kwargs, dataset='CIFAR_10')
+
+
 def get_preloaded(dataset='CIFAR_10', device='cpu'):
     # load the main dataset images etc.
     loader = DATA_LOADER[dataset](normalise=NORMALISE, 

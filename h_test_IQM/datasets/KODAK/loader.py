@@ -3,7 +3,7 @@ import glob
 from h_test_IQM.datasets.utils.utils import load_image
 
 
-def load_kodak():
+def kodak_loader():
     file_path = os.path.dirname(os.path.abspath(__file__))
     dir = os.path.join(file_path, 'raw_data')
     image_list = glob.glob(os.path.join(dir, '*'))
