@@ -11,7 +11,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning,
 
 
 
-class epislon_noise:
+class epsilon_noise:
     def __init__(self, epsilon=1, acceptable_percent=0.9, max_iter=10):
         self.epsilon = epsilon
         self.acceptable_percent = acceptable_percent
@@ -72,7 +72,7 @@ if __name__ == '__main__':
     # test for both numpy and torch images
     import torch
     import matplotlib.pyplot as plt
-    noise = epislon_noise()
+    noise = epsilon_noise()
 
     # numpy
     img = np.random.rand(32, 32, 3)

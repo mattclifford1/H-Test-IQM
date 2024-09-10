@@ -100,6 +100,9 @@ class entropy_model:
             counts = embs
 
         return counts
+    
+    def __call__(self, x):
+        return self.counts_per_emb_feature_flat(x)
 
         
 

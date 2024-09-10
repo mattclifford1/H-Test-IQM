@@ -1,8 +1,10 @@
+'''Compressive Autoencoder model with entropy bottleneck.'''
+
 import torch
 from torch import nn
 import torch.nn.functional as F
 
-from h_test_IQM.models.gdn import GDN
+from h_test_IQM.models.utils import GDN
 
 
 # GDN from https://interdigitalinc.github.io/CompressAI/_modules/compressai/layers/gdn.html

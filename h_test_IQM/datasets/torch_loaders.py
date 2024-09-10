@@ -33,6 +33,8 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
         pre_loaded_images = get_preloaded(dataset=dataset, device=device)
     elif pre_loaded_images == None:
         pre_loaded_images = {}
+    else:
+        pre_loaded_images = {}
 
     # get inds - split into train, val and test
     train_inds, val_inds, test_inds = get_indicies(props, total_instances=TOTAL_INSTANCES[dataset])
