@@ -1,13 +1,17 @@
+'''
+Get scoring from entropy model
+Currently only supports entropy model with 2 centers and we take the ratio of -1, 1 either spacially or flattened
+'''
 import os
 import torch
 from torchvision.transforms import Resize
 from torchvision.transforms.v2 import Resize as Resize_v2
 
-from h_test_IQM.models.compressive_AE import EntropyLimitedModel
+from h_test_IQM.models.compressive_AE_model import EntropyLimitedModel
 
 
 class entropy_model:
-    def __init__(self, im_size=(128, 128), metric='mse', dist='natural', centers=2, device='cpu'):
+    def __init__(self, im_size=(128, 128), metric='mse', dist='natural', centers=2, device='cpu', spacial=False):
         # checks    
         if metric not in ['mse', 'ssim', 'nlpd']:
             raise ValueError('Invalid metric, needs to be one of: mse, ssim, nlpd')
@@ -16,6 +20,7 @@ class entropy_model:
         if centers not in [2, 5]:
             raise ValueError('Invalid number of centers, needs to be one of: 2, 5')
         self.centers = centers
+        self.spacial = spacial
         self.model = EntropyLimitedModel(
             N=128, M=64, sigmoid=True, centers=self.centers)
 
@@ -102,7 +107,10 @@ class entropy_model:
         return counts
     
     def __call__(self, x):
-        return self.counts_per_emb_feature_flat(x)
+        if self.spacial == False:
+            return self.counts_per_emb_feature_flat(x)
+        else:
+            return self.counts_per_emb_feature_spacial(x)
 
         
 

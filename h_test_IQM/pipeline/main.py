@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from tqdm import tqdm
 
-from h_test_IQM.datasets.torch_loaders import CIFAR10_loader
+from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader
 from h_test_IQM.datasets.numpy_loaders import kodak_loader
 from h_test_IQM.distortions.noise_sphere import epsilon_noise
 from h_test_IQM.models.entropy_encoder import entropy_model
@@ -19,9 +19,13 @@ def get_scores(dataset_target='CIFAR-10',
     print(f'Running with: {dataset_target}, {dataset_test}, {transform}, {scorer}, {test}, {device}')
 
     if dev == True:
-        dataset_proportion = 0.01
+        dataset_proportion_CIFAR = 0.005
+        dataset_proportion_IMAGENET = 0.0002
+        dataset_proportion_IMAGENETVAL = 0.0002
     else:
-        dataset_proportion = 1
+        dataset_proportion_CIFAR = 1
+        dataset_proportion_IMAGENET = 1
+        dataset_proportion_IMAGENETVAL = 1
 
     # check if cuda is available
     if device == 'cuda':
@@ -32,20 +36,38 @@ def get_scores(dataset_target='CIFAR-10',
     # pre-data loading
     if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
         train_CIFAR, val_CIFAR, test_CIFAR, train_total = CIFAR10_loader(
-            pre_loaded_images=False, device=device, dataset_proportion=dataset_proportion)
+            pre_loaded_images=False, device=device, dataset_proportion=dataset_proportion_CIFAR)
+    if 'IMAGENET64' == dataset_target or 'IMAGENET64' == dataset_test:
+        train_IMAGENET, val_IMAGENET, test_IMAGENET, train_total = IMAGENET64_loader(
+            pre_loaded_images=False, device=device, dataset_proportion=dataset_proportion_IMAGENET)
+    if 'IMAGENET64VAL' == dataset_target or 'IMAGENET64VAL' == dataset_test:
+        train_IMAGENETVAL, val_IMAGENETVAL, test_IMAGENETVAL, train_total = IMAGENET64_loader(
+            pre_loaded_images=False, device=device, dataset_proportion=dataset_proportion_IMAGENETVAL)
 
     # DATA TARGET LOADING
     if dataset_target == 'CIFAR-10':        
         target_dataloader = train_CIFAR
+    elif dataset_target == 'IMAGENET64':    
+        target_dataloader = train_IMAGENET
+    elif dataset_target == 'IMAGENET64VAL':        
+        target_dataloader = train_IMAGENETVAL
     elif dataset_target == 'KODAK':
         target_dataloader = kodak_loader()
+    else:
+        raise ValueError(f'{dataset_target} dataset_target not recognised')
 
     
     # DATA TEST LOADING
     if dataset_test == 'CIFAR-10':
-        test_dataloader = test_CIFAR
+        test_dataloader = train_CIFAR
+    elif dataset_test == 'IMAGENET64':  
+        test_dataloader = train_IMAGENET
+    elif dataset_test == 'IMAGENET64VAL':     
+        test_dataloader = train_IMAGENETVAL
     elif dataset_test == 'KODAK':
         test_dataloader = kodak_loader()
+    else:
+        raise ValueError(f'{dataset_test} dataset_test not recognised')
 
 
     # DISTORTION
