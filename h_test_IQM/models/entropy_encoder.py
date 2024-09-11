@@ -32,11 +32,16 @@ class entropy_model:
         model_path = os.path.join(os.path.dirname(current_file), 'save_nets', f'{name}.pth')
 
         # load weights
+        if device == 'cuda':
+            if not torch.cuda.is_available():
+                print('Cuda not available even though requested for model, running on CPU instead')
+                device = 'cpu'
         self.device = device
         # load model from checkpoint - https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-a-general-checkpoint-for-inference-and-or-resuming-training
         checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()  # puts into exact rounding for the embedding code vectors
+        self.model.to(device)
 
         # extras
         # self.resizer = Resize_v2((256, 256))
@@ -120,7 +125,7 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     # create model
-    model = entropy_model(metric='mse', dist='natural', centers=2, im_size=(256, 256))
+    model = entropy_model(metric='mse', dist='natural', centers=2, im_size=(256, 256), device='cuda')
 
     # create random image
     x = np.random.rand(32, 32, 3).astype(np.float32)

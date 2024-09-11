@@ -118,31 +118,65 @@ Extras:
     
     # SCORER
     if scorer == 'entropy-2-mse':
-        model = entropy_model(metric='mse', dist='natural',
-                              centers=2, im_size=(256, 256))
+        model = entropy_model(metric='mse', 
+                              dist='natural',
+                              centers=2, 
+                              im_size=(256, 256),
+                              device=device)
 
     # TESTING
-    dist_target = get_sample_from_scorer(
+    scores_target = get_sample_from_scorer(
         target_dataloader, transform_func, model, name='scoring target')
-    dist_test = get_sample_from_scorer(
+    scores_test = get_sample_from_scorer(
         test_dataloader, transform_func, model, name='scoring test')
     
     results = {}
+    dist_target, dist_test, target_bins, test_bins = samples_to_pdf(
+        scores_target, scores_test, num_bins=50)
     if 'KL' in test:
         # use the histogram of score samples to get some sort of "PMF/PDF"
-        kl = entropy(pk=np.histogram(dist_target)[0], 
-                     qk=np.histogram(dist_test)[0])
+        kl = entropy(pk=dist_target, 
+                     qk=dist_test)
         print(f'KL divergence: {kl}')
         results['KL'] = kl
 
     if 'plot_hist' in test:
-        plt.hist(dist_target, bins=100, alpha=0.5, label='target')
-        plt.hist(dist_test, bins=100, alpha=0.5, label='test')
+        plot_hist(dist_target, target_bins, name='target')
+        plot_hist(dist_test, test_bins, name='test')
         plt.legend()
         plt.show()
 
     
-    return dist_target, dist_test, results
+    return scores_target, scores_test, results
+
+
+def plot_hist(dist, bins, name=''):
+    width = np.diff(bins)
+    center = (bins[:-1] + bins[1:]) / 2
+    plt.bar(center, dist, align='center',
+            width=width, label=name, alpha=0.5)
+
+
+def samples_to_pdf(sample1, sample2, num_bins=10):
+    # convert scores into PDF via normalised histograms
+    # use two samples for both on the same range
+    min_val = min(sample1.min(), sample2.min())
+    max_val = max(sample1.max(), sample2.max())
+    range_vals = (min_val, max_val)
+    dist1, bins1 = np.histogram(
+        sample1, bins=num_bins, range=range_vals, density=True)
+    dist2, bins2 = np.histogram(
+        sample2, bins=num_bins, range=range_vals, density=True)
+    
+    # numerical stability if any bin is 0
+    if np.any(dist1 == 0) or np.any(dist2 == 0):
+        dist1 += 1e-6
+        dist2 += 1e-6
+        # normalise
+        dist1 /= dist1.sum()
+        dist2 /= dist2.sum()
+
+    return dist1, dist2, bins1, bins2
 
 
 def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
