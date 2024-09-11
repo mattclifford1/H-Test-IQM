@@ -1,5 +1,7 @@
 import torch
 import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import entropy
 from tqdm import tqdm
 
 from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader
@@ -12,11 +14,39 @@ def get_scores(dataset_target='CIFAR-10',
                dataset_test='CIFAR-10',
                transform=None,
                scorer='entropy-2-mse',
-               test='plot',
+               test='plot_hist',
                device='cuda',
-               dev=False):
+               batch_size=32,
+               dev=False,
+               help=False):
+    if help == True:
+        print('''
+Pipeline to test an image dataset compared to a target distribution.
+              
+Available params:
+    dataset_target: 'CIFAR-10', 'IMAGENET64', 'IMAGENET64VAL', 'KODAK'
+    dataset_test: 'CIFAR-10', 'IMAGENET64', 'IMAGENET64VAL', 'KODAK'
+    transform: None, 'epsilon_noise'
+    scorer: 'entropy-2-mse'
+    test: 'plot_hist', 'KL' (can be a list)
+    device: 'cuda', 'cpu'
+    batch_size: int
+    dev: bool
+        ''')
+        return
     
-    print(f'Running with: {dataset_target}, {dataset_test}, {transform}, {scorer}, {test}, {device}')
+    print(f'''Pipeline: 
+    target_dataset: {dataset_target} 
+    test_dataset:   {dataset_test} 
+    transform:      {transform} 
+    scorer:         {scorer} 
+    test type:      {test} 
+
+Extras:
+    device:     {device}
+    batch size: {batch_size}
+    dev mode:   {dev}
+''')
 
     if dev == True:
         dataset_proportion_CIFAR = 0.005
@@ -36,13 +66,22 @@ def get_scores(dataset_target='CIFAR-10',
     # pre-data loading
     if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
         train_CIFAR, val_CIFAR, test_CIFAR, train_total = CIFAR10_loader(
-            pre_loaded_images=False, device=device, dataset_proportion=dataset_proportion_CIFAR)
+            pre_loaded_images=False, 
+            device=device, 
+            dataset_proportion=dataset_proportion_CIFAR,
+            batch_size=batch_size)
     if 'IMAGENET64' == dataset_target or 'IMAGENET64' == dataset_test:
         train_IMAGENET, val_IMAGENET, test_IMAGENET, train_total = IMAGENET64_loader(
-            pre_loaded_images=False, device=device, dataset_proportion=dataset_proportion_IMAGENET)
+            pre_loaded_images=False, 
+            device=device, 
+            dataset_proportion=dataset_proportion_IMAGENET,
+            batch_size=batch_size)
     if 'IMAGENET64VAL' == dataset_target or 'IMAGENET64VAL' == dataset_test:
         train_IMAGENETVAL, val_IMAGENETVAL, test_IMAGENETVAL, train_total = IMAGENET64_loader(
-            pre_loaded_images=False, device=device, dataset_proportion=dataset_proportion_IMAGENETVAL)
+            pre_loaded_images=False, 
+            device=device, 
+            dataset_proportion=dataset_proportion_IMAGENETVAL,
+            batch_size=batch_size)
 
     # DATA TARGET LOADING
     if dataset_target == 'CIFAR-10':        
@@ -83,15 +122,30 @@ def get_scores(dataset_target='CIFAR-10',
                               centers=2, im_size=(256, 256))
 
     # TESTING
-    dist_target = get_dist_from_scorer(
-        target_dataloader, transform_func, model)
-    dist_test = get_dist_from_scorer(
-        test_dataloader, transform_func, model)
+    dist_target = get_sample_from_scorer(
+        target_dataloader, transform_func, model, name='scoring target')
+    dist_test = get_sample_from_scorer(
+        test_dataloader, transform_func, model, name='scoring test')
     
-    return dist_target, dist_test
+    results = {}
+    if 'KL' in test:
+        # use the histogram of score samples to get some sort of "PMF/PDF"
+        kl = entropy(pk=np.histogram(dist_target)[0], 
+                     qk=np.histogram(dist_test)[0])
+        print(f'KL divergence: {kl}')
+        results['KL'] = kl
+
+    if 'plot_hist' in test:
+        plt.hist(dist_target, bins=100, alpha=0.5, label='target')
+        plt.hist(dist_test, bins=100, alpha=0.5, label='test')
+        plt.legend()
+        plt.show()
+
+    
+    return dist_target, dist_test, results
 
 
-def get_dist_from_scorer(dataset, transform, scorer):
+def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
     scores = []
     for batch in tqdm(dataset, desc='scoring', leave=False):
         # get image
