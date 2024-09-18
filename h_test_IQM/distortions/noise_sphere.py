@@ -12,17 +12,21 @@ warnings.filterwarnings("ignore", category=DeprecationWarning,
 
 
 class epsilon_noise:
-    def __init__(self, epsilon=1, acceptable_percent=0.9, max_iter=10):
+    def __init__(self, epsilon=1, acceptable_percent=0.9, max_iter=50):
         self.epsilon = epsilon
         self.acceptable_percent = acceptable_percent
         self.max_iter = max_iter
+        self.num_rejected = 0
 
     @staticmethod
     def _make_noisey_image(img, epsilon, lib=np):
         noise = np.random.randn(*img.shape)
         noise_norm = noise / np.linalg.norm(noise.reshape(-1))
         additive_noise = epsilon * noise_norm
-        unclipped = img + additive_noise
+        if lib == torch:
+            unclipped = img + torch.Tensor(additive_noise)
+        else:
+            unclipped = img + additive_noise
         x_noisey = lib.clip(unclipped, 0, 1)
         return x_noisey, additive_noise
 
@@ -44,6 +48,7 @@ class epsilon_noise:
                         noisy_imgs.append(noisy_img)
                 if len(noisy_imgs) == 0:
                     return None
+                
                 return torch.stack(noisy_imgs).to(device)
             else:
                 # torch single
@@ -64,6 +69,8 @@ class epsilon_noise:
             # option to reject and redo the noise if too low (recursion)
             if actual_noise >= self.acceptable_percent * expected_noise:
                 return x_noisey
+            
+        self.num_rejected += 1
         return None
 
 

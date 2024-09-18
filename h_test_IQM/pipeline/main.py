@@ -12,7 +12,8 @@ from h_test_IQM.models.entropy_encoder import entropy_model
 
 def get_scores(dataset_target='CIFAR-10',
                dataset_test='CIFAR-10',
-               transform=None,
+               transform_target=None,
+               transform_test=None,
                scorer='entropy-2-mse',
                test='plot_hist',
                device='cuda',
@@ -26,7 +27,8 @@ Pipeline to test an image dataset compared to a target distribution.
 Available params:
     dataset_target: 'CIFAR-10', 'IMAGENET64', 'IMAGENET64VAL', 'KODAK'
     dataset_test: 'CIFAR-10', 'IMAGENET64', 'IMAGENET64VAL', 'KODAK'
-    transform: None, 'epsilon_noise'
+    transform_target: None, 'epsilon_noise'
+    transform_test: None, 'epsilon_noise'
     scorer: 'entropy-2-mse'
     test: 'plot_hist', 'KL' (can be a list)
     device: 'cuda', 'cpu'
@@ -36,11 +38,12 @@ Available params:
         return
     
     print(f'''Pipeline: 
-    target_dataset: {dataset_target} 
-    test_dataset:   {dataset_test} 
-    transform:      {transform} 
-    scorer:         {scorer} 
-    test type:      {test} 
+    target_dataset:   {dataset_target} 
+    test_dataset:     {dataset_test} 
+    transform_target: {transform_target} 
+    transform_test:   {transform_test} 
+    scorer:           {scorer} 
+    test type:        {test} 
 
 Extras:
     device:     {device}
@@ -109,12 +112,18 @@ Extras:
         raise ValueError(f'{dataset_test} dataset_test not recognised')
 
 
-    # DISTORTION
-    if transform == 'epsilon_noise':
-        transform_func = epsilon_noise(
+    # DISTORTIONS
+    if transform_target == 'epsilon_noise':
+        transform_func_target = epsilon_noise(
             epsilon=1, acceptable_percent=0.9, max_iter=10)
     else:
-        transform_func = None
+        transform_func_target = None
+        
+    if transform_test == 'epsilon_noise':
+        transform_func_test = epsilon_noise(
+            epsilon=1, acceptable_percent=0.9, max_iter=10)
+    else:
+        transform_func_test = None
     
     # SCORER
     if scorer == 'entropy-2-mse':
@@ -126,9 +135,9 @@ Extras:
 
     # TESTING
     scores_target = get_sample_from_scorer(
-        target_dataloader, transform_func, model, name='scoring target')
+        target_dataloader, transform_func_target, model, name='scoring target')
     scores_test = get_sample_from_scorer(
-        test_dataloader, transform_func, model, name='scoring test')
+        test_dataloader, transform_func_test, model, name='scoring test')
     
     results = {}
     dist_target, dist_test, target_bins, test_bins = samples_to_pdf(
@@ -198,9 +207,16 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
             scores.append(score)
         else:
             scores.append(score)
+
+    # show usesr if there were any rejected transformations of images
+    if hasattr(transform, 'num_rejected'):
+        if transform.num_rejected > 0:
+            print(f'{transform.num_rejected} images were rejected in distortion transform')
+
     # stack all scores into one array
     scores = np.hstack(scores)
     return scores
 
 if __name__ == '__main__':
-    get_scores()
+    get_scores(transform_test='epsilon_noise',
+               dev=True,)
