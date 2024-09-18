@@ -14,7 +14,8 @@ class CIFAR_10_LOADER:
         indicies_to_use: list of in the dataset to use if you require to use a split of the dataset
         image_dict: dictionary of pre loaded images filename as keys and torch tensor as values 
     '''
-    def __init__(self, indicies_to_use='all', 
+    def __init__(self, 
+                 indicies_to_use='all', 
                  image_dict={}, 
                  cache_data=True,
                  normalise=(0, 1),

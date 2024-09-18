@@ -14,6 +14,9 @@ def IMAGENET64_loader(*args, **kwargs):
 def IMAGENET64VAL_loader(*args, **kwargs):
     return get_all_loaders(*args, **kwargs, dataset='IMAGENET64_VAL')
 
+def UNIFORM_loader(*args, **kwargs):
+    return get_all_loaders(*args, **kwargs, dataset='UNIFORM')
+
 
 def get_preloaded(dataset='CIFAR_10', device='cpu'):
     # load the main dataset images etc.

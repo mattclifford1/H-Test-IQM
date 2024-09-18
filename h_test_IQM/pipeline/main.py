@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import entropy
 from tqdm import tqdm
 
-from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader
+from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader, UNIFORM_loader
 from h_test_IQM.datasets.numpy_loaders import kodak_loader
 from h_test_IQM.distortions.noise_sphere import epsilon_noise
 from h_test_IQM.models.entropy_encoder import entropy_model
@@ -85,6 +85,13 @@ Extras:
             device=device, 
             dataset_proportion=dataset_proportion_IMAGENETVAL,
             batch_size=batch_size)
+        
+    if 'UNIFORM' == dataset_test or 'UNIFORM' == dataset_target:
+        train_UNIF, val_UNIF, test_UNIF, train_total = UNIFORM_loader(
+            pre_loaded_images=False, 
+            device=device, 
+            dataset_proportion=dataset_proportion_CIFAR,
+            batch_size=batch_size)
 
     # DATA TARGET LOADING
     if dataset_target == 'CIFAR-10':        
@@ -95,6 +102,8 @@ Extras:
         target_dataloader = train_IMAGENETVAL
     elif dataset_target == 'KODAK':
         target_dataloader = kodak_loader()
+    elif dataset_target == 'UNIFORM':
+        target_dataloader = train_UNIF
     else:
         raise ValueError(f'{dataset_target} dataset_target not recognised')
 
@@ -108,6 +117,8 @@ Extras:
         test_dataloader = train_IMAGENETVAL
     elif dataset_test == 'KODAK':
         test_dataloader = kodak_loader()
+    elif dataset_test == 'UNIFORM':
+        test_dataloader = train_UNIF
     else:
         raise ValueError(f'{dataset_test} dataset_test not recognised')
 
@@ -218,5 +229,8 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
     return scores
 
 if __name__ == '__main__':
-    get_scores(transform_test='epsilon_noise',
-               dev=True,)
+    get_scores(
+        dataset_target='CIFAR-10',
+        dataset_test='UNIFORM',
+        transform_test='epsilon_noise',
+        dev=True,)
