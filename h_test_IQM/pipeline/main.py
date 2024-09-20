@@ -127,7 +127,7 @@ Extras:
     # DATA TEST LOADING
     if dataset_test == 'CIFAR_10':
         test_dataloader = CIFAR10_loader(
-            pre_loaded_images=CIFAR_ims,
+            pre_loaded_images=False, ######CHANGEEEEE
             device=device,
             dataset_proportion=dataset_proportion_CIFAR,
             batch_size=batch_size,
