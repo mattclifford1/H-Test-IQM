@@ -63,6 +63,8 @@ class entropy_model:
     
     def _preprocess_image(self, x):
         # convert to pytorch tensor if numpy array input
+        print(type(x))
+        print(x.shape)
         if not torch.is_tensor(x):
             x = torch.tensor(x, dtype=torch.float32)
         # check if image is grayscale

@@ -78,10 +78,11 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
     # load images into RAM/VRAM
     if pre_loaded_images == True:
         pre_loaded_images = get_preloaded(dataset=dataset, device=device)
-    elif pre_loaded_images == None:
+    elif pre_loaded_images == None or pre_loaded_images == False:
         pre_loaded_images = {}
     else:
-        pre_loaded_images = {}
+        if not isinstance(pre_loaded_images, dict):
+            raise ValueError(f'incorrect pre_loaded_images type: {type(pre_loaded_images)}')
 
     # get loaders
     # val_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=val_inds, image_dict=pre_loaded_images)

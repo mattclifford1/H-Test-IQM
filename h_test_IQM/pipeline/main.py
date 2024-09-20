@@ -157,18 +157,18 @@ Extras:
         raise ValueError(f'{dataset_test} dataset_test not recognised')
 
     if dev == True:
-        print(f'num target: {len(target_dataloader)}\n num test: {len(test_dataloader)}')
+        print(f'num target: {len(target_dataloader)}\nnum test: {len(test_dataloader)}\n')
 
     # DISTORTIONS
     if transform_target == 'epsilon_noise':
         transform_func_target = epsilon_noise(
-            epsilon=1, acceptable_percent=0.9, max_iter=10)
+            epsilon=1, acceptable_percent=0.9, max_iter=50)
     else:
         transform_func_target = None
         
     if transform_test == 'epsilon_noise':
         transform_func_test = epsilon_noise(
-            epsilon=1, acceptable_percent=0.9, max_iter=10)
+            epsilon=1, acceptable_percent=0.9, max_iter=50)
     else:
         transform_func_test = None
     
@@ -239,8 +239,8 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
     scores = []
     for batch in tqdm(dataset, desc='scoring', leave=False):
         # get image
-        if isinstance(batch, tuple) or isinstance(batch, list):
-            img = batch[0]
+        if isinstance(batch, tuple):
+            img = batch[0] # just get the image not labels
         else:
             img = batch
         # transform
@@ -269,8 +269,8 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
 if __name__ == '__main__':
     get_scores(
         dataset_target='CIFAR_10',
-        dataset_test='UNIFORM',
-        test_labels=[0, 1],
+        dataset_test='CIFAR_10',
+        # test_labels=[0, 1],
         transform_test='epsilon_noise',
         scorer='entropy-2-mse',
         dev=True,)
