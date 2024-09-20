@@ -30,7 +30,8 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
                     batch_size=32, 
                     pre_loaded_images=None, 
                     dataset='CIFAR_10',
-                    dataset_proportion=0.5,):
+                    dataset_proportion=0.5,
+                    seed=0):
     '''
     get train, val and test torch loaders from CIFAR or IMAGENET 
         set pre_loaded_images to True to load all images into RAM/VRAM
@@ -46,7 +47,7 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
         pre_loaded_images = {}
 
     # get inds - split into train, val and test
-    train_inds, val_inds, test_inds = get_indicies(props, total_instances=TOTAL_INSTANCES[dataset])
+    train_inds, val_inds, test_inds = get_indicies(props, total_instances=TOTAL_INSTANCES[dataset], seed=seed)
     # reduce the amount of training data
     if not isinstance(dataset_proportion, str):
         train_total = max(min(int(dataset_proportion*len(train_inds)), len(train_inds)), 1)
