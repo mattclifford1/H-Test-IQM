@@ -71,7 +71,8 @@ Extras:
 
     # pre-data loading
     if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
-        CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
+        # CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
+        pass
     if 'IMAGENET64_TRAIN' == dataset_target or 'IMAGENET64_TRAIN' == dataset_test:
         IMAGENET64_TRAIN_ims = get_preloaded(dataset='IMAGENET64_TRAIN', device=device)
     if 'IMAGENET64_VAL' == dataset_target or 'IMAGENET64_VAL' == dataset_test:
@@ -95,12 +96,14 @@ Extras:
     # DATA TARGET LOADING
     if dataset_target == 'CIFAR_10':  
         target_dataloader = CIFAR10_loader(
-            pre_loaded_images=CIFAR_ims,
+            # pre_loaded_images=CIFAR_ims,
+            pre_loaded_images=False, ######CHANGEEEEE
             device=device,
             dataset_proportion=dataset_proportion_CIFAR,
             batch_size=batch_size,
             seed=seed,
-            labels_to_use=target_labels)
+            labels_to_use=target_labels
+            )
     elif dataset_target == 'IMAGENET64_TRAIN':
         target_dataloader = IMAGENET64_loader(
             pre_loaded_images=IMAGENET64_TRAIN_ims,
@@ -181,8 +184,12 @@ Extras:
                               device=device)
 
     # TESTING
+    if dev == True:
+        print('scoring target')
     scores_target = get_sample_from_scorer(
         target_dataloader, transform_func_target, model, name='scoring target')
+    if dev == True:
+        print('scoring test')
     scores_test = get_sample_from_scorer(
         test_dataloader, transform_func_test, model, name='scoring test')
     
@@ -238,6 +245,7 @@ def samples_to_pdf(sample1, sample2, num_bins=10):
 def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
     scores = []
     for batch in tqdm(dataset, desc='scoring', leave=False):
+        print(batch)
         # get image
         if isinstance(batch, tuple):
             img = batch[0] # just get the image not labels
