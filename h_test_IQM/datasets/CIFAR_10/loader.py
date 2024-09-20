@@ -57,6 +57,12 @@ class CIFAR_10_LOADER:
             image = self._get_image(filename)
             images[filename] = image
         return images
+    
+    def get_numerical_labels(self):
+        return self.numerical_label
+
+    def get_str_labels(self):
+        return self.labels
 
     def _get_image(self, filename):
         # use cache data if loaded already

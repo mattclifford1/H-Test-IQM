@@ -25,13 +25,23 @@ def get_preloaded(dataset='CIFAR_10', device='cpu'):
     pre_loaded_images = loader.get_images_dict()
     return pre_loaded_images
 
+def get_classes(dataset='CIFAR_10', numerical=False):
+    # load all the classes for the dataset
+    loader = DATA_LOADER[dataset]()
+    if numerical == True:
+        return loader.get_numerical_labels()
+    else:
+        return loader.get_labels()
+
+
 def get_all_loaders(props=[0.4, 0.3, 0.3], 
                     device='cpu', 
                     batch_size=32, 
                     pre_loaded_images=None, 
                     dataset='CIFAR_10',
                     dataset_proportion=0.5,
-                    seed=0):
+                    seed=0,
+                    labels_to_use='all'):
     '''
     get train, val and test torch loaders from CIFAR or IMAGENET 
         set pre_loaded_images to True to load all images into RAM/VRAM
@@ -39,6 +49,33 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
         dataset_proportion between 0 and 1 to reduce the amount of training data
         dataset = 'CIFAR_10' or 'IMAGENET64_VAL' or 'IMAGENET64_TRAIN' or 'UNIFORM'(uniform noise data)
     '''
+    # get inds - split into train, val and test
+    if labels_to_use == 'all':
+        total = TOTAL_INSTANCES[dataset]
+    elif not isinstance(labels_to_use, list):
+        raise ValueError(
+            f"labels_to_use needs to be a list of labels to use (or 'all'), got: {labels_to_use}")
+    else:
+        if isinstance(labels_to_use[0], str):
+            labels = get_classes(dataset=dataset, numerical=False)
+        else:
+            labels = get_classes(dataset=dataset, numerical=True)
+        all_inds_to_use = []
+        # loop over inds and labels
+        for i, l in enumerate(labels):
+            if l in labels_to_use:
+                all_inds_to_use.append(i)
+        total = all_inds_to_use
+
+
+    train_inds, val_inds, test_inds = get_indicies(
+        props, total_instances=total, seed=seed)
+    # reduce the amount of training data
+    if not isinstance(dataset_proportion, str):
+        train_total = max(min(int(dataset_proportion*len(train_inds)), len(train_inds)), 1)
+        train_inds = train_inds[:train_total]   # inds are shuffled already so we can take a random sample
+    
+    # load images into RAM/VRAM
     if pre_loaded_images == True:
         pre_loaded_images = get_preloaded(dataset=dataset, device=device)
     elif pre_loaded_images == None:
@@ -46,16 +83,9 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
     else:
         pre_loaded_images = {}
 
-    # get inds - split into train, val and test
-    train_inds, val_inds, test_inds = get_indicies(props, total_instances=TOTAL_INSTANCES[dataset], seed=seed)
-    # reduce the amount of training data
-    if not isinstance(dataset_proportion, str):
-        train_total = max(min(int(dataset_proportion*len(train_inds)), len(train_inds)), 1)
-        train_inds = train_inds[:train_total]   # inds are shuffled already so we can take a random sample
-    
     # get loaders
-    val_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=val_inds, image_dict=pre_loaded_images)
-    test_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=test_inds, image_dict=pre_loaded_images)
+    # val_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=val_inds, image_dict=pre_loaded_images)
+    # test_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=test_inds, image_dict=pre_loaded_images)
     if not isinstance(dataset_proportion, str):
         train_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=train_inds, image_dict=pre_loaded_images)
     elif dataset_proportion == 'uniform': # get uniform noise loader
@@ -72,12 +102,12 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
     train_dataloader = DataLoader(train_loader,  # type: ignore
                                 batch_size=batch_size, 
                                 shuffle=True)
-    val_dataloader = DataLoader(val_loader,  # type: ignore
-                                batch_size=batch_size, 
-                                shuffle=False,
-                                drop_last=False)
-    test_dataloader = DataLoader(test_loader,  # type: ignore
-                                batch_size=batch_size, 
-                                shuffle=False,
-                                drop_last=False)
-    return train_dataloader, val_dataloader, test_dataloader, train_total
+    # val_dataloader = DataLoader(val_loader,  # type: ignore
+    #                             batch_size=batch_size, 
+    #                             shuffle=False,
+    #                             drop_last=False)
+    # test_dataloader = DataLoader(test_loader,  # type: ignore
+    #                             batch_size=batch_size, 
+    #                             shuffle=False,
+    #                             drop_last=False)
+    return train_dataloader#, val_dataloader, test_dataloader, train_total

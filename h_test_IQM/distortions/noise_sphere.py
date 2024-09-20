@@ -52,7 +52,11 @@ class epsilon_noise:
                 return torch.stack(noisy_imgs).to(device)
             else:
                 # torch single
-                return self._call_single(img, epsilon, lib=torch).to(device)
+                noisey = self._call_single(img, epsilon, lib=torch)
+                if noisey is None:
+                    return None
+                else:
+                    return noisey.to(device)
         else:
             # numpy array
             return self._call_single(img, epsilon, lib=np)

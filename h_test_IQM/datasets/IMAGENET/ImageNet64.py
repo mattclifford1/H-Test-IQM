@@ -59,6 +59,12 @@ class IMAGENET_64_LOADER:
             images[filename] = image
         return images
     
+    def get_numerical_labels(self):
+        return self.numerical_label
+    
+    def get_str_labels(self):
+        return self.labels
+    
     def _process_image(self, image):
         image = image.to(self.dtype)
         image = image/255

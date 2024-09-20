@@ -4,14 +4,16 @@ import matplotlib.pyplot as plt
 from scipy.stats import entropy
 from tqdm import tqdm
 
-from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader, UNIFORM_loader
+from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader, UNIFORM_loader, get_preloaded
 from h_test_IQM.datasets.numpy_loaders import kodak_loader
 from h_test_IQM.distortions.noise_sphere import epsilon_noise
 from h_test_IQM.models.entropy_encoder import entropy_model
 
 
-def get_scores(dataset_target='CIFAR-10',
-               dataset_test='CIFAR-10',
+def get_scores(dataset_target='CIFAR_10',
+               dataset_test='CIFAR_10',
+               target_labels='all',
+               test_labels='all',
                transform_target=None,
                transform_test=None,
                scorer='entropy-2-mse',
@@ -19,14 +21,15 @@ def get_scores(dataset_target='CIFAR-10',
                device='cuda',
                batch_size=32,
                dev=False,
-               help=False):
+               help=False,
+               seed=0):
     if help == True:
         print('''
 Pipeline to test an image dataset compared to a target distribution.
               
 Available params:
-    dataset_target: 'CIFAR-10', 'IMAGENET64', 'IMAGENET64VAL', 'KODAK'
-    dataset_test: 'CIFAR-10', 'IMAGENET64', 'IMAGENET64VAL', 'KODAK'
+    dataset_target: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
+    dataset_test: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
     transform_target: None, 'epsilon_noise'
     transform_test: None, 'epsilon_noise'
     scorer: 'entropy-2-mse'
@@ -68,38 +71,52 @@ Extras:
 
     # pre-data loading
     if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
-        train_CIFAR, val_CIFAR, test_CIFAR, train_total = CIFAR10_loader(
-            pre_loaded_images=False, 
-            device=device, 
-            dataset_proportion=dataset_proportion_CIFAR,
-            batch_size=batch_size)
-    if 'IMAGENET64' == dataset_target or 'IMAGENET64' == dataset_test:
-        train_IMAGENET, val_IMAGENET, test_IMAGENET, train_total = IMAGENET64_loader(
-            pre_loaded_images=False, 
-            device=device, 
-            dataset_proportion=dataset_proportion_IMAGENET,
-            batch_size=batch_size)
-    if 'IMAGENET64VAL' == dataset_target or 'IMAGENET64VAL' == dataset_test:
+        CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
+    if 'IMAGENET64_TRAIN' == dataset_target or 'IMAGENET64_TRAIN' == dataset_test:
+        IMAGENET64_TRAIN_ims = get_preloaded(dataset='IMAGENET64_TRAIN', device=device)
+    if 'IMAGENET64_VAL' == dataset_target or 'IMAGENET64_VAL' == dataset_test:
+        IMAGENET64_VAL_ims = get_preloaded(dataset='IMAGENET64_VAL', device=device)
+
         train_IMAGENETVAL, val_IMAGENETVAL, test_IMAGENETVAL, train_total = IMAGENET64_loader(
             pre_loaded_images=False, 
             device=device, 
             dataset_proportion=dataset_proportion_IMAGENETVAL,
-            batch_size=batch_size)
+            batch_size=batch_size,
+            seed=seed)
         
     if 'UNIFORM' == dataset_test or 'UNIFORM' == dataset_target:
         train_UNIF, val_UNIF, test_UNIF, train_total = UNIFORM_loader(
             pre_loaded_images=False, 
-            device=device, 
+            device=device,
             dataset_proportion=dataset_proportion_CIFAR,
-            batch_size=batch_size)
+            batch_size=batch_size,
+            seed=seed)
 
     # DATA TARGET LOADING
-    if dataset_target == 'CIFAR-10':        
-        target_dataloader = train_CIFAR
-    elif dataset_target == 'IMAGENET64':    
-        target_dataloader = train_IMAGENET
-    elif dataset_target == 'IMAGENET64VAL':        
-        target_dataloader = train_IMAGENETVAL
+    if dataset_target == 'CIFAR_10':  
+        target_dataloader = CIFAR10_loader(
+            pre_loaded_images=CIFAR_ims,
+            device=device,
+            dataset_proportion=dataset_proportion_CIFAR,
+            batch_size=batch_size,
+            seed=seed,
+            labels_to_use=target_labels)
+    elif dataset_target == 'IMAGENET64_TRAIN':
+        target_dataloader = IMAGENET64_loader(
+            pre_loaded_images=IMAGENET64_TRAIN_ims,
+            device=device,
+            dataset_proportion=dataset_proportion_IMAGENET,
+            batch_size=batch_size,
+            seed=seed,
+            labels_to_use=target_labels)
+    elif dataset_target == 'IMAGENET64_VAL':        
+        target_dataloader = IMAGENET64VAL_loader(
+            pre_loaded_images=IMAGENET64_VAL_ims,
+            device=device,
+            dataset_proportion=dataset_proportion_IMAGENETVAL,
+            batch_size=batch_size,
+            seed=seed,
+            labels_to_use=target_labels)
     elif dataset_target == 'KODAK':
         target_dataloader = kodak_loader()
     elif dataset_target == 'UNIFORM':
@@ -107,14 +124,31 @@ Extras:
     else:
         raise ValueError(f'{dataset_target} dataset_target not recognised')
 
-    
     # DATA TEST LOADING
-    if dataset_test == 'CIFAR-10':
-        test_dataloader = train_CIFAR
-    elif dataset_test == 'IMAGENET64':  
-        test_dataloader = train_IMAGENET
-    elif dataset_test == 'IMAGENET64VAL':     
-        test_dataloader = train_IMAGENETVAL
+    if dataset_test == 'CIFAR_10':
+        test_dataloader = CIFAR10_loader(
+            pre_loaded_images=CIFAR_ims,
+            device=device,
+            dataset_proportion=dataset_proportion_CIFAR,
+            batch_size=batch_size,
+            seed=seed,
+            labels_to_use=test_labels)
+    elif dataset_test == 'IMAGENET64_TRAIN':
+        test_dataloader = IMAGENET64_loader(
+            pre_loaded_images=IMAGENET64_TRAIN_ims,
+            device=device,
+            dataset_proportion=dataset_proportion_IMAGENET,
+            batch_size=batch_size,
+            seed=seed,
+            labels_to_use=test_labels)
+    elif dataset_test == 'IMAGENET64_VAL':
+        test_dataloader = IMAGENET64VAL_loader(
+            pre_loaded_images=IMAGENET64_VAL_ims,
+            device=device,
+            dataset_proportion=dataset_proportion_IMAGENETVAL,
+            batch_size=batch_size,
+            seed=seed,
+            labels_to_use=test_labels)
     elif dataset_test == 'KODAK':
         test_dataloader = kodak_loader()
     elif dataset_test == 'UNIFORM':
@@ -122,6 +156,8 @@ Extras:
     else:
         raise ValueError(f'{dataset_test} dataset_test not recognised')
 
+    if dev == True:
+        print(f'num target: {len(target_dataloader)}\n num test: {len(test_dataloader)}')
 
     # DISTORTIONS
     if transform_target == 'epsilon_noise':
@@ -210,6 +246,8 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
         # transform
         if transform is not None:
             img = transform(img)
+            if img is None:
+                continue
         # score
         score = scorer(img)
         if len(score.shape) == 2:
@@ -230,7 +268,9 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
 
 if __name__ == '__main__':
     get_scores(
-        dataset_target='CIFAR-10',
+        dataset_target='CIFAR_10',
         dataset_test='UNIFORM',
+        test_labels=[0, 1],
         transform_test='epsilon_noise',
+        scorer='entropy-2-mse',
         dev=True,)
