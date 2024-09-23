@@ -245,9 +245,8 @@ def samples_to_pdf(sample1, sample2, num_bins=10):
 def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
     scores = []
     for batch in tqdm(dataset, desc='scoring', leave=False):
-        print(batch)
         # get image
-        if isinstance(batch, tuple):
+        if isinstance(batch, tuple) or isinstance(batch, list):
             img = batch[0] # just get the image not labels
         else:
             img = batch
