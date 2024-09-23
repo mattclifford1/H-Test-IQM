@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader, UNIFORM_loader, get_preloaded
 from h_test_IQM.datasets.numpy_loaders import kodak_loader
-from h_test_IQM.distortions.noise_sphere import epsilon_noise
+from h_test_IQM.distortions import TRANSFORMS
 from h_test_IQM.models.entropy_encoder import entropy_model
 
 
@@ -69,7 +69,7 @@ Extras:
             print('cuda not available, using cpu')
             device = 'cpu'
 
-    # pre-data loading
+    # pre-data loading ########################################################################################
     if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
         if dev == True:
                 CIFAR_ims = {}  
@@ -88,7 +88,7 @@ Extras:
             batch_size=batch_size,
             seed=seed)
 
-    # DATA TARGET LOADING
+    # DATA TARGET LOADING ########################################################################################
     if dataset_target == 'CIFAR_10':  
         target_dataloader = CIFAR10_loader(
             # pre_loaded_images=CIFAR_ims,
@@ -122,7 +122,7 @@ Extras:
     else:
         raise ValueError(f'{dataset_target} dataset_target not recognised')
 
-    # DATA TEST LOADING
+    # DATA TEST LOADING ########################################################################################
     if dataset_test == 'CIFAR_10':
         test_dataloader = CIFAR10_loader(
             pre_loaded_images=CIFAR_ims,  # CHANGEEEEE
@@ -158,19 +158,19 @@ Extras:
         print(f'''num target samples: {len(target_dataloader.dataset)
                              }\nnum test samples: {len(test_dataloader.dataset)}\n''')
 
-    # DISTORTIONS
-    if transform_target == 'epsilon_noise':
-        transform_func_target = epsilon_noise(
-            epsilon=1, acceptable_percent=0.9, max_iter=50)
+
+    # DISTORTIONS ########################################################################################
+    if transform_target in TRANSFORMS:
+        transform_func_target = TRANSFORMS[transform_target]()
     else:
-        transform_func_target = None
-        
-    if transform_test == 'epsilon_noise':
-        transform_func_test = epsilon_noise(
-            epsilon=1, acceptable_percent=0.9, max_iter=50)
-    else:
-        transform_func_test = None
+        raise ValueError(f'{transform_target} transform_target needs to be one of {TRANSFORMS.keys()}')
     
+    if transform_test in TRANSFORMS:
+        transform_func_test = TRANSFORMS[transform_test]()
+    else:
+        raise ValueError(f'{transform_test} transform_test needs to be one of {TRANSFORMS.keys()}')
+        
+
     # SCORER
     if scorer == 'entropy-2-mse':
         model = entropy_model(metric='mse', 
@@ -179,7 +179,8 @@ Extras:
                               im_size=(256, 256),
                               device=device)
 
-    # TESTING
+
+    # TESTING ########################################################################################
     if dev == True:
         print('scoring target')
     scores_target = get_sample_from_scorer(
@@ -274,7 +275,7 @@ if __name__ == '__main__':
         dataset_target='CIFAR_10',
         dataset_test='CIFAR_10',
         test_labels=[0, 1],
-        transform_test='epsilon_noise',
+        transform_test='gaussian_noise',
         scorer='entropy-2-mse',
         test='KL',
         dev=True,
