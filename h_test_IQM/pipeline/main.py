@@ -71,20 +71,15 @@ Extras:
 
     # pre-data loading
     if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
-        # CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
-        pass
+        if dev == True:
+                CIFAR_ims = {}  
+        else:
+            CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
     if 'IMAGENET64_TRAIN' == dataset_target or 'IMAGENET64_TRAIN' == dataset_test:
         IMAGENET64_TRAIN_ims = get_preloaded(dataset='IMAGENET64_TRAIN', device=device)
     if 'IMAGENET64_VAL' == dataset_target or 'IMAGENET64_VAL' == dataset_test:
         IMAGENET64_VAL_ims = get_preloaded(dataset='IMAGENET64_VAL', device=device)
 
-        train_IMAGENETVAL, val_IMAGENETVAL, test_IMAGENETVAL, train_total = IMAGENET64_loader(
-            pre_loaded_images=False, 
-            device=device, 
-            dataset_proportion=dataset_proportion_IMAGENETVAL,
-            batch_size=batch_size,
-            seed=seed)
-        
     if 'UNIFORM' == dataset_test or 'UNIFORM' == dataset_target:
         train_UNIF, val_UNIF, test_UNIF, train_total = UNIFORM_loader(
             pre_loaded_images=False, 
@@ -130,7 +125,7 @@ Extras:
     # DATA TEST LOADING
     if dataset_test == 'CIFAR_10':
         test_dataloader = CIFAR10_loader(
-            pre_loaded_images=False, ######CHANGEEEEE
+            pre_loaded_images=CIFAR_ims,  # CHANGEEEEE
             device=device,
             dataset_proportion=dataset_proportion_CIFAR,
             batch_size=batch_size,
@@ -160,7 +155,8 @@ Extras:
         raise ValueError(f'{dataset_test} dataset_test not recognised')
 
     if dev == True:
-        print(f'num target: {len(target_dataloader)}\nnum test: {len(test_dataloader)}\n')
+        print(f'''num target samples: {len(target_dataloader.dataset)
+                             }\nnum test samples: {len(test_dataloader.dataset)}\n''')
 
     # DISTORTIONS
     if transform_target == 'epsilon_noise':
@@ -277,7 +273,9 @@ if __name__ == '__main__':
     get_scores(
         dataset_target='CIFAR_10',
         dataset_test='CIFAR_10',
-        # test_labels=[0, 1],
+        test_labels=[0, 1],
         transform_test='epsilon_noise',
         scorer='entropy-2-mse',
-        dev=True,)
+        test='KL',
+        dev=True,
+        )

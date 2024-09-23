@@ -52,6 +52,7 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
     # get inds - split into train, val and test
     if labels_to_use == 'all':
         total = TOTAL_INSTANCES[dataset]
+        all_inds_to_use = list(range(total))
     elif not isinstance(labels_to_use, list):
         raise ValueError(
             f"labels_to_use needs to be a list of labels to use (or 'all'), got: {labels_to_use}")
@@ -65,11 +66,9 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
         for i, l in enumerate(labels):
             if l in labels_to_use:
                 all_inds_to_use.append(i)
-        total = all_inds_to_use
-
 
     train_inds, val_inds, test_inds = get_indicies(
-        props, total_instances=total, seed=seed)
+        props, total_instances=all_inds_to_use, seed=seed)
     # reduce the amount of training data
     if not isinstance(dataset_proportion, str):
         train_total = max(min(int(dataset_proportion*len(train_inds)), len(train_inds)), 1)

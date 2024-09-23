@@ -17,6 +17,8 @@ def get_indicies(proportions=[0.7, 0.3], total_instances=60000, seed=42):
         inds = total_instances
     else:
         raise ValueError(f'total_instances needs to be int or list not {type(total_instances)}')
+    
+    num_inds = len(inds)
 
     # shuffle the inds
     random.Random(seed).shuffle(inds)
@@ -25,7 +27,7 @@ def get_indicies(proportions=[0.7, 0.3], total_instances=60000, seed=42):
     ind_list = []
     prev_ind = 0
     for prop in proportions:
-        next_ind = prev_ind + int(total_instances*prop)
+        next_ind = prev_ind + int(num_inds*prop)
         ind_list.append(inds[prev_ind:next_ind])
         prev_ind = next_ind
     return ind_list
