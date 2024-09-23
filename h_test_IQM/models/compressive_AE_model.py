@@ -1,5 +1,5 @@
 '''Compressive Autoencoder model with entropy bottleneck.'''
-
+import os
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -55,6 +55,10 @@ class EntropyLimitedModel(nn.Module):
 
         if sigmoid:
             self.decoder.add_module('sig', nn.Sigmoid())
+
+        current_file = os.path.abspath(__file__)
+        self.checkpoint_dir = os.path.join(os.path.dirname(
+            current_file), 'save_nets')
 
     def encode(self, x):
         y = self.encoder(x)

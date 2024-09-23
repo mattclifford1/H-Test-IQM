@@ -7,7 +7,7 @@ from tqdm import tqdm
 from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader, UNIFORM_loader, get_preloaded
 from h_test_IQM.datasets.numpy_loaders import kodak_loader
 from h_test_IQM.distortions import TRANSFORMS
-from h_test_IQM.models.entropy_encoder import entropy_model
+from h_test_IQM.scorers import SCORERS
 
 
 def get_scores(dataset_target='CIFAR_10',
@@ -30,8 +30,8 @@ Pipeline to test an image dataset compared to a target distribution.
 Available params:
     dataset_target: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
     dataset_test: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
-    transform_target: None, 'epsilon_noise'
-    transform_test: None, 'epsilon_noise'
+    transform_target: None, 'epsilon_noise' 'gaussian_noise', None
+    transform_test: None, See above
     scorer: 'entropy-2-mse'
     test: 'plot_hist', 'KL' (can be a list)
     device: 'cuda', 'cpu'
@@ -171,13 +171,11 @@ Extras:
         raise ValueError(f'{transform_test} transform_test needs to be one of {TRANSFORMS.keys()}')
         
 
-    # SCORER
-    if scorer == 'entropy-2-mse':
-        model = entropy_model(metric='mse', 
-                              dist='natural',
-                              centers=2, 
-                              im_size=(256, 256),
-                              device=device)
+    # SCORER ########################################################################################
+    if scorer in SCORERS:
+        model = SCORERS[scorer](im_size=(256, 256), device=device)
+    else: 
+        raise ValueError(f'{scorer} scorer needs to be one of {SCORERS.keys()}')
 
 
     # TESTING ########################################################################################

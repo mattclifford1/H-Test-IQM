@@ -10,35 +10,40 @@ from torchvision.transforms.v2 import Resize as Resize_v2
 from h_test_IQM.models.compressive_AE_model import EntropyLimitedModel
 
 
-class entropy_model:
+class entropy_encoder_model:
     def __init__(self, im_size=(128, 128), metric='mse', dist='natural', centers=2, device='cpu', spacial=False):
-        # checks    
+        # checks
         if metric not in ['mse', 'ssim', 'nlpd']:
-            raise ValueError('Invalid metric, needs to be one of: mse, ssim, nlpd')
+            raise ValueError(
+                'Invalid metric, needs to be one of: mse, ssim, nlpd')
         if dist not in ['natural', 'uniform']:
-            raise ValueError('Invalid training distribution, needs to be one of: natural, uniform')
+            raise ValueError(
+                'Invalid training distribution, needs to be one of: natural, uniform')
         if centers not in [2, 5]:
-            raise ValueError('Invalid number of centers, needs to be one of: 2, 5')
+            raise ValueError(
+                'Invalid number of centers, needs to be one of: 2, 5')
         self.centers = centers
         self.spacial = spacial
         self.model = EntropyLimitedModel(
             N=128, M=64, sigmoid=True, centers=self.centers)
 
         # get weights path
-        current_file = os.path.abspath(__file__)
         name = f'{metric}-{self.centers}'
         if dist == 'uniform':
             name += '-u'
-        model_path = os.path.join(os.path.dirname(current_file), 'save_nets', f'{name}.pth')
+        model_path = os.path.join(self.model.checkpoint_dir, f'{name}.pth')
 
         # load weights
         if device == 'cuda':
             if not torch.cuda.is_available():
-                print('Cuda not available even though requested for model, running on CPU instead')
+                print(
+                    'Cuda not available even though requested for model, running on CPU instead')
                 device = 'cpu'
         self.device = device
+
         # load model from checkpoint - https://pytorch.org/tutorials/beginner/saving_loading_models.html#saving-loading-a-general-checkpoint-for-inference-and-or-resuming-training
-        checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
+        checkpoint = torch.load(
+            model_path, map_location=self.device, weights_only=True)
         self.model.load_state_dict(checkpoint['model_state_dict'])
         self.model.eval()  # puts into exact rounding for the embedding code vectors
         self.model.to(device)
@@ -60,7 +65,7 @@ class entropy_model:
             y_hat = self.model.quantise(y)
         y_hat = y_hat.cpu().numpy()
         return y_hat
-    
+
     def _preprocess_image(self, x):
         # convert to pytorch tensor if numpy array input
         # print(x.shape)
@@ -81,14 +86,14 @@ class entropy_model:
             # x = torch.nn.functional.interpolate(x.permute(0, 3, 1, 2), size=(size, size), mode='bilinear').permute(0, 2, 3, 1)
             x = self.resizer(x)
         return x
-    
+
     def counts_per_emb_feature_flat(self, x):
         # get the counts of values in the embeddings, we ignore all spacial information
         embs = self.embeddings(x)
         # flatten the embeddings
         embs = embs.reshape((embs.shape[0], -1))
         if self.centers == 2:  # can do the ratio of -1, 1
-            ones_emb = (embs==1)
+            ones_emb = (embs == 1)
             counts = ones_emb.sum(axis=1)/ones_emb.shape[1]
 
         # TODO: center 5
@@ -96,14 +101,14 @@ class entropy_model:
             counts = embs
 
         return counts
-    
+
     def counts_per_emb_feature_spacial(self, x):
         # get the counts of values in the embeddings, using all spacial information
         embs = self.embeddings(x)
         # flatten the embeddings
         embs = embs.reshape((embs.shape[0], embs.shape[1], -1))
         if self.centers == 2:  # can do the ratio of -1, 1
-            ones_emb = (embs==1)
+            ones_emb = (embs == 1)
             counts = ones_emb.sum(axis=2)/ones_emb.shape[2]
 
         # TODO: center 5
@@ -111,14 +116,13 @@ class entropy_model:
             counts = embs
 
         return counts
-    
+
     def __call__(self, x):
         if self.spacial == False:
             return self.counts_per_emb_feature_flat(x)
         else:
             return self.counts_per_emb_feature_spacial(x)
 
-        
 
 if __name__ == '__main__':
     # test
@@ -126,7 +130,8 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     # create model
-    model = entropy_model(metric='mse', dist='natural', centers=2, im_size=(256, 256), device='cuda')
+    model = entropy_model(metric='mse', dist='natural',
+                          centers=2, im_size=(256, 256), device='cuda')
 
     # create random image
     x = np.random.rand(32, 32, 3).astype(np.float32)
@@ -140,7 +145,6 @@ if __name__ == '__main__':
     c = model.counts_per_emb_feature_spacial(x)
     print('counts spac:', c.shape)
 
-
-    ## plot
+    # plot
     # plt.imshow(x.squeeze())
     # plt.show()
