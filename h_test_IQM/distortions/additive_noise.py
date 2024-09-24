@@ -1,6 +1,7 @@
 '''
 generate noise on a unit sphere for 'barely visible' noise
 '''
+from abc import ABC, abstractmethod
 import numpy as np
 import torch
 import warnings
@@ -8,9 +9,6 @@ import warnings
 # Suppress the specific DeprecationWarning
 warnings.filterwarnings("ignore", category=DeprecationWarning,
                         message="__array_wrap__ must accept context and return_scalar arguments")
-
-
-from abc import ABC, abstractmethod
 
 
 class base_noise(ABC):

@@ -1,4 +1,4 @@
-from .torch_scorers import entropy_encoder_model
+from .entropy_AE import entropy_encoder_model
 
 
 class init_entropy_encoder():
