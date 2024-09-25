@@ -1,4 +1,5 @@
 from .entropy_AE import entropy_encoder_model
+from .brisque_scorer import brisque_model
 
 
 class init_entropy_encoder():
@@ -19,6 +20,11 @@ class init_entropy_encoder():
                                device=device)
     
 
+def init_BRISQUE(*args, **kwargs):
+    return brisque_model()
+    
+
 SCORERS = {
-    'entropy-2-mse': init_entropy_encoder(metric='mse', dist='natural', centers=2)
+    'entropy-2-mse': init_entropy_encoder(metric='mse', dist='natural', centers=2),
+    'BRISQUE': init_BRISQUE,
 }   

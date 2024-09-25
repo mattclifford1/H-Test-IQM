@@ -274,7 +274,8 @@ if __name__ == '__main__':
         dataset_test='CIFAR_10',
         test_labels=[0, 1],
         transform_test='gaussian_noise',
-        scorer='entropy-2-mse',
+        # scorer='entropy-2-mse',
+        scorer='BRISQUE',
         test='KL',
         dev=True,
         )
