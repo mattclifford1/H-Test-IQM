@@ -20,9 +20,11 @@ def get_scores(dataset_target='CIFAR_10',
                test='plot_hist',
                device='cuda',
                batch_size=32,
+               dataset_proportion=1,
                dev=False,
                help=False,
-               seed=0):
+               seed=0,
+               _print=True):
     if help == True:
         print('''
 Pipeline to test an image dataset compared to a target distribution.
@@ -39,34 +41,35 @@ Available params:
     dev: bool
         ''')
         return
-    
-    print(f'''Pipeline: 
-    target_dataset:   {dataset_target} 
-    test_dataset:     {dataset_test} 
-    transform_target: {transform_target} 
-    transform_test:   {transform_test} 
-    scorer:           {scorer} 
-    test type:        {test} 
+    if _print == True:
+        print(f'''Pipeline: 
+        target_dataset:   {dataset_target} 
+        test_dataset:     {dataset_test} 
+        transform_target: {transform_target} 
+        transform_test:   {transform_test} 
+        scorer:           {scorer} 
+        test type:        {test} 
 
-Extras:
-    device:     {device}
-    batch size: {batch_size}
-    dev mode:   {dev}
-''')
+    Extras:
+        device:     {device}
+        batch size: {batch_size}
+        dev mode:   {dev}
+    ''')
 
     if dev == True:
         dataset_proportion_CIFAR = 0.005
         dataset_proportion_IMAGENET = 0.0002
         dataset_proportion_IMAGENETVAL = 0.0002
     else:
-        dataset_proportion_CIFAR = 1
-        dataset_proportion_IMAGENET = 1
-        dataset_proportion_IMAGENETVAL = 1
+        dataset_proportion_CIFAR = dataset_proportion
+        dataset_proportion_IMAGENET = dataset_proportion
+        dataset_proportion_IMAGENETVAL = dataset_proportion
 
     # check if cuda is available
     if device == 'cuda':
         if not torch.cuda.is_available():
-            print('cuda not available, using cpu')
+            if _print == True:
+                print('cuda not available, using cpu')
             device = 'cpu'
 
     # pre-data loading ########################################################################################
@@ -155,8 +158,9 @@ Extras:
         raise ValueError(f'{dataset_test} dataset_test not recognised')
 
     if dev == True:
-        print(f'''num target samples: {len(target_dataloader.dataset)
-                             }\nnum test samples: {len(test_dataloader.dataset)}\n''')
+        if _print == True:
+            print(f'''num target samples: {len(target_dataloader.dataset)
+                                }\nnum test samples: {len(test_dataloader.dataset)}\n''')
 
 
     # DISTORTIONS ########################################################################################
@@ -180,11 +184,13 @@ Extras:
 
     # TESTING ########################################################################################
     if dev == True:
-        print('scoring target')
+        if _print == True:
+            print('scoring target')
     scores_target = get_sample_from_scorer(
         target_dataloader, transform_func_target, model, name='scoring target')
     if dev == True:
-        print('scoring test')
+        if _print == True:
+            print('scoring test')
     scores_test = get_sample_from_scorer(
         test_dataloader, transform_func_test, model, name='scoring test')
     
@@ -195,7 +201,8 @@ Extras:
         # use the histogram of score samples to get some sort of "PMF/PDF"
         kl = entropy(pk=dist_target, 
                      qk=dist_test)
-        print(f'KL divergence: {kl}')
+        if _print == True:
+            print(f'KL divergence: {kl}')
         results['KL'] = kl
 
     if 'plot_hist' in test:
