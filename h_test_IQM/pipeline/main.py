@@ -157,10 +157,9 @@ Available params:
     else:
         raise ValueError(f'{dataset_test} dataset_test not recognised')
 
-    if dev == True:
-        if _print == True:
-            print(f'''num target samples: {len(target_dataloader.dataset)
-                                }\nnum test samples: {len(test_dataloader.dataset)}\n''')
+    if _print == True:
+        print(f'''num target samples: {len(target_dataloader.dataset)
+                            }\nnum test samples: {len(test_dataloader.dataset)}\n''')
 
 
     # DISTORTIONS ########################################################################################
