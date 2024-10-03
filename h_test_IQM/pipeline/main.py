@@ -4,10 +4,26 @@ import matplotlib.pyplot as plt
 from scipy.stats import entropy
 from tqdm import tqdm
 
-from h_test_IQM.datasets.torch_loaders import CIFAR10_loader, IMAGENET64_loader, IMAGENET64VAL_loader, UNIFORM_loader, get_preloaded
+from h_test_IQM.datasets import DATA_LOADER
+from h_test_IQM.datasets.torch_loaders import get_preloaded, get_all_loaders
 from h_test_IQM.datasets.numpy_loaders import kodak_loader
 from h_test_IQM.distortions import TRANSFORMS
 from h_test_IQM.scorers import SCORERS
+
+def _get_preloaded(dataset='CIFAR_10', device='cpu'):
+    if dataset in ['CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL']:
+        return get_preloaded(dataset=dataset, device=device)
+    else:
+        return False
+
+def fetch_preloaded(dataset_list, device='cpu', dev=False):
+    pre_loaded_images = {}
+    for dataset in set(dataset_list):
+        if dev == True:
+            pre_loaded_images[dataset] = {}
+        else:
+            pre_loaded_images[dataset] = _get_preloaded(dataset=dataset, device=device)
+    return pre_loaded_images
 
 
 def get_scores(dataset_target='CIFAR_10',
@@ -24,7 +40,8 @@ def get_scores(dataset_target='CIFAR_10',
                dev=False,
                help=False,
                seed=0,
-               _print=True):
+               _print=True,
+               preloaded_ims=None):
     if help == True:
         print('''
 Pipeline to test an image dataset compared to a target distribution.
@@ -57,13 +74,19 @@ Available params:
     ''')
 
     if dev == True:
-        dataset_proportion_CIFAR = 0.005
-        dataset_proportion_IMAGENET = 0.0002
-        dataset_proportion_IMAGENETVAL = 0.0002
+        dataset_proportions = {'CIFAR_10': 0.005, 
+                               'UNIFORM': 0.005,
+                               'MNIST': 0.005,
+                               'IMAGENET64_TRAIN': 0.0002, 
+                               'IMAGENET64_VAL': 0.0002,
+                               'KODAK': 1}
     else:
-        dataset_proportion_CIFAR = dataset_proportion
-        dataset_proportion_IMAGENET = dataset_proportion
-        dataset_proportion_IMAGENETVAL = dataset_proportion
+        dataset_proportions = {'CIFAR_10': dataset_proportion,
+                               'UNIFORM': dataset_proportion,
+                               'MNIST': dataset_proportion,
+                               'IMAGENET64_TRAIN': dataset_proportion, 
+                               'IMAGENET64_VAL': dataset_proportion,
+                               'KODAK': dataset_proportion}
 
     # check if cuda is available
     if device == 'cuda':
@@ -73,94 +96,29 @@ Available params:
             device = 'cpu'
 
     # pre-data loading ########################################################################################
-    if dev == True:
-            CIFAR_ims = {}
-            IMAGENET64_TRAIN_ims = {}
-            IMAGENET64_VAL_ims = {}
-    else:
-        if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
-            if dev == True:
-                    CIFAR_ims = {}  
-            else:
-                CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
-        if 'IMAGENET64_TRAIN' == dataset_target or 'IMAGENET64_TRAIN' == dataset_test:
-            IMAGENET64_TRAIN_ims = get_preloaded(dataset='IMAGENET64_TRAIN', device=device)
-        if 'IMAGENET64_VAL' == dataset_target or 'IMAGENET64_VAL' == dataset_test:
-            IMAGENET64_VAL_ims = get_preloaded(dataset='IMAGENET64_VAL', device=device)
-
-    if 'UNIFORM' == dataset_test or 'UNIFORM' == dataset_target:
-        train_UNIF, val_UNIF, test_UNIF, train_total = UNIFORM_loader(
-            pre_loaded_images=False, 
-            device=device,
-            dataset_proportion=dataset_proportion_CIFAR,
-            batch_size=batch_size,
-            seed=seed)
+    if preloaded_ims == None:
+        preloaded_ims = fetch_preloaded([dataset_target, dataset_test], device=device, dev=dev)
 
     # DATA TARGET LOADING ########################################################################################
-    if dataset_target == 'CIFAR_10':  
-        target_dataloader = CIFAR10_loader(
-            # pre_loaded_images=CIFAR_ims,
-            pre_loaded_images=False, ######CHANGEEEEE
-            device=device,
-            dataset_proportion=dataset_proportion_CIFAR,
-            batch_size=batch_size,
-            seed=seed,
-            labels_to_use=target_labels
-            )
-    elif dataset_target == 'IMAGENET64_TRAIN':
-        target_dataloader = IMAGENET64_loader(
-            pre_loaded_images=IMAGENET64_TRAIN_ims,
-            device=device,
-            dataset_proportion=dataset_proportion_IMAGENET,
-            batch_size=batch_size,
-            seed=seed,
-            labels_to_use=target_labels)
-    elif dataset_target == 'IMAGENET64_VAL':        
-        target_dataloader = IMAGENET64VAL_loader(
-            pre_loaded_images=IMAGENET64_VAL_ims,
-            device=device,
-            dataset_proportion=dataset_proportion_IMAGENETVAL,
-            batch_size=batch_size,
-            seed=seed,
-            labels_to_use=target_labels)
-    elif dataset_target == 'KODAK':
-        target_dataloader = kodak_loader()
-    elif dataset_target == 'UNIFORM':
-        target_dataloader = train_UNIF
-    else:
-        raise ValueError(f'{dataset_target} dataset_target not recognised')
+    target_dataloader = get_all_loaders(
+        pre_loaded_images=preloaded_ims[dataset_target],
+        device=device,
+        dataset_proportion=dataset_proportions[dataset_target],
+        batch_size=batch_size,
+        seed=seed,
+        labels_to_use=target_labels
+    )
+    # elif dataset_target == 'KODAK':
+    #     target_dataloader = kodak_loader()
 
     # DATA TEST LOADING ########################################################################################
-    if dataset_test == 'CIFAR_10':
-        test_dataloader = CIFAR10_loader(
-            pre_loaded_images=CIFAR_ims,  # CHANGEEEEE
-            device=device,
-            dataset_proportion=dataset_proportion_CIFAR,
-            batch_size=batch_size,
-            seed=seed,
-            labels_to_use=test_labels)
-    elif dataset_test == 'IMAGENET64_TRAIN':
-        test_dataloader = IMAGENET64_loader(
-            pre_loaded_images=IMAGENET64_TRAIN_ims,
-            device=device,
-            dataset_proportion=dataset_proportion_IMAGENET,
-            batch_size=batch_size,
-            seed=seed,
-            labels_to_use=test_labels)
-    elif dataset_test == 'IMAGENET64_VAL':
-        test_dataloader = IMAGENET64VAL_loader(
-            pre_loaded_images=IMAGENET64_VAL_ims,
-            device=device,
-            dataset_proportion=dataset_proportion_IMAGENETVAL,
-            batch_size=batch_size,
-            seed=seed,
-            labels_to_use=test_labels)
-    elif dataset_test == 'KODAK':
-        test_dataloader = kodak_loader()
-    elif dataset_test == 'UNIFORM':
-        test_dataloader = train_UNIF
-    else:
-        raise ValueError(f'{dataset_test} dataset_test not recognised')
+    test_dataloader = get_all_loaders(
+        pre_loaded_images=preloaded_ims[dataset_test],
+        device=device,
+        dataset_proportion=dataset_proportions[dataset_test],
+        batch_size=batch_size,
+        seed=seed,
+        labels_to_use=test_labels)
 
     if _print == True:
         print(f'''num target samples: {len(target_dataloader.dataset)
@@ -282,7 +240,7 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
 if __name__ == '__main__':
     get_scores(
         dataset_target='CIFAR_10',
-        dataset_test='MNIST',
+        dataset_test='IMAGENET64_VAL',
         test_labels=[0, 1],
         transform_test='gaussian_noise',
         scorer='entropy-2-mse',

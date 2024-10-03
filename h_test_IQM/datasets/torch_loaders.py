@@ -5,17 +5,17 @@ from h_test_IQM.datasets.utils.proportions import get_indicies
 NORMALISE = (0, 1)
 
 
-def CIFAR10_loader(*args, **kwargs):
-    return get_all_loaders(*args, **kwargs, dataset='CIFAR_10')
+# def CIFAR10_loader(*args, **kwargs):
+#     return get_all_loaders(*args, **kwargs, dataset='CIFAR_10')
 
-def IMAGENET64_loader(*args, **kwargs):
-    return get_all_loaders(*args, **kwargs, dataset='IMAGENET64_TRAIN')
+# def IMAGENET64_loader(*args, **kwargs):
+#     return get_all_loaders(*args, **kwargs, dataset='IMAGENET64_TRAIN')
 
-def IMAGENET64VAL_loader(*args, **kwargs):
-    return get_all_loaders(*args, **kwargs, dataset='IMAGENET64_VAL')
+# def IMAGENET64VAL_loader(*args, **kwargs):
+#     return get_all_loaders(*args, **kwargs, dataset='IMAGENET64_VAL')
 
-def UNIFORM_loader(*args, **kwargs):
-    return get_all_loaders(*args, **kwargs, dataset='UNIFORM')
+# def UNIFORM_loader(*args, **kwargs):
+#     return get_all_loaders(*args, **kwargs, dataset='UNIFORM')
 
 
 def get_preloaded(dataset='CIFAR_10', device='cpu'):
@@ -49,6 +49,9 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
         dataset_proportion between 0 and 1 to reduce the amount of training data
         dataset = 'CIFAR_10' or 'IMAGENET64_VAL' or 'IMAGENET64_TRAIN' or 'UNIFORM'(uniform noise data)
     '''
+    if dataset == 'kodak':
+        return DATA_LOADER['KODAK']()
+    
     # get inds - split into train, val and test
     if labels_to_use == 'all':
         total = TOTAL_INSTANCES[dataset]
