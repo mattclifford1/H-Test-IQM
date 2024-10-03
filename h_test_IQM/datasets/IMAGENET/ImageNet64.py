@@ -4,33 +4,21 @@ import pandas as pd
 import numpy as np
 import torch
 from torchvision.io import read_image
+from h_test_IQM.datasets.abstract_dataset import abstract_dataset_torch
 
 DEFAULT_VAL_DATASET = os.path.join(os.path.expanduser('~'), 'datasets', 'ImageNet64', 'val')
 DEFAULT_TRAIN_DATASET = os.path.join(os.path.expanduser('~'), 'datasets', 'ImageNet64', 'train')
 
 
-class IMAGENET_64_LOADER:
+class IMAGENET_64_LOADER(abstract_dataset_torch):
     '''
     Generic data loader for IMAGENET-64
     Args:
         indicies_to_use: list of in the dataset to use if you require to use a split of the dataset
         image_dict: dictionary of pre loaded images filename as keys and torch tensor as values 
     '''
-    def __init__(self, 
-                 data_dir=DEFAULT_VAL_DATASET,
-                 indicies_to_use='all', 
-                 image_dict={}, 
-                 cache_data=True,
-                 normalise=(0, 1),
-                 dtype=torch.float32,
-                 device='cpu'):
+    def setup(self, data_dir=DEFAULT_VAL_DATASET):
         self.image_dir = os.path.join(data_dir, 'images')
-        self.indicies_to_use = indicies_to_use
-        self.image_dict = image_dict
-        self.cache_data = cache_data
-        self.normalise = normalise
-        self.dtype = dtype
-        self.device = device
 
         self.label_cache = {}
         self.meta_data = pd.read_csv(os.path.join(data_dir, 'meta_data.csv'))

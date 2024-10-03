@@ -5,29 +5,17 @@ import torch
 from torchvision.io import read_image
 from h_test_IQM.datasets.CIFAR_10.VARS import CIFAR_10_META_CSV, CIFAR_10_IMAGE_DIR
 from h_test_IQM.datasets.CIFAR_10.downloader import download_CIFAR_10
+from h_test_IQM.datasets.abstract_dataset import abstract_dataset_torch
 
 
-class CIFAR_10_LOADER:
+class CIFAR_10_LOADER(abstract_dataset_torch):
     '''
     Generic data loader for CIFAR-10
     Args:
         indicies_to_use: list of in the dataset to use if you require to use a split of the dataset
         image_dict: dictionary of pre loaded images filename as keys and torch tensor as values 
     '''
-    def __init__(self, 
-                 indicies_to_use='all', 
-                 image_dict={}, 
-                 cache_data=True,
-                 normalise=(0, 1),
-                 dtype=torch.float32,
-                 device='cpu'):
-        self.indicies_to_use = indicies_to_use
-        self.image_dict = image_dict
-        self.cache_data = cache_data
-        self.normalise = normalise
-        self.dtype = dtype
-        self.device = device
-
+    def setup(self):
         # make sure dataset is downloaded
         download_CIFAR_10()    
 

@@ -73,15 +73,20 @@ Available params:
             device = 'cpu'
 
     # pre-data loading ########################################################################################
-    if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
-        if dev == True:
-                CIFAR_ims = {}  
-        else:
-            CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
-    if 'IMAGENET64_TRAIN' == dataset_target or 'IMAGENET64_TRAIN' == dataset_test:
-        IMAGENET64_TRAIN_ims = get_preloaded(dataset='IMAGENET64_TRAIN', device=device)
-    if 'IMAGENET64_VAL' == dataset_target or 'IMAGENET64_VAL' == dataset_test:
-        IMAGENET64_VAL_ims = get_preloaded(dataset='IMAGENET64_VAL', device=device)
+    if dev == True:
+            CIFAR_ims = {}
+            IMAGENET64_TRAIN_ims = {}
+            IMAGENET64_VAL_ims = {}
+    else:
+        if 'CIFAR' in dataset_target or 'CIFAR' in dataset_test:
+            if dev == True:
+                    CIFAR_ims = {}  
+            else:
+                CIFAR_ims = get_preloaded(dataset='CIFAR_10', device=device)
+        if 'IMAGENET64_TRAIN' == dataset_target or 'IMAGENET64_TRAIN' == dataset_test:
+            IMAGENET64_TRAIN_ims = get_preloaded(dataset='IMAGENET64_TRAIN', device=device)
+        if 'IMAGENET64_VAL' == dataset_target or 'IMAGENET64_VAL' == dataset_test:
+            IMAGENET64_VAL_ims = get_preloaded(dataset='IMAGENET64_VAL', device=device)
 
     if 'UNIFORM' == dataset_test or 'UNIFORM' == dataset_target:
         train_UNIF, val_UNIF, test_UNIF, train_total = UNIFORM_loader(
@@ -277,7 +282,7 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
 if __name__ == '__main__':
     get_scores(
         dataset_target='CIFAR_10',
-        dataset_test='CIFAR_10',
+        dataset_test='IMAGENET64_TRAIN',
         test_labels=[0, 1],
         transform_test='gaussian_noise',
         # scorer='entropy-2-mse',
