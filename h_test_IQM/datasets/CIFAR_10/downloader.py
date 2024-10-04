@@ -12,7 +12,8 @@ from h_test_IQM.datasets.CIFAR_10.VARS import CIFAR_10_RAW_DATA_DIR, CIFAR_10_ME
 
 def download_CIFAR_10(redo_download=False):
     if redo_download == True:
-        shutil.rmtree(CIFAR_10_RAW_DATA_DIR)
+        if os.path.exists(CIFAR_10_RAW_DATA_DIR):
+            shutil.rmtree(CIFAR_10_RAW_DATA_DIR)
     if not os.path.exists(CIFAR_10_RAW_DATA_DIR):
         # use torch vision to download CIFAR-10 and unzip
         _ = torchvision.datasets.CIFAR10(root=CIFAR_10_RAW_DATA_DIR, train=True,

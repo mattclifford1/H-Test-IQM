@@ -9,7 +9,8 @@ from h_test_IQM.datasets.Caltech256.VARS import Caltech256_RAW_DATA_DIR, Caltech
 
 def download_Caltech256(redo_download=False):
     if redo_download == True:
-        shutil.rmtree(Caltech256_RAW_DATA_DIR)
+        if os.path.exists(Caltech256_RAW_DATA_DIR):
+            shutil.rmtree(Caltech256_RAW_DATA_DIR)
     
     if not os.path.exists(Caltech256_RAW_DATA_DIR) or not os.path.exists(Caltech256_IMAGE_DIR):
         # use torch vision to download CIFAR-10 and unzip
