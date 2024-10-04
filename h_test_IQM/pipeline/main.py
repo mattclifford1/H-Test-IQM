@@ -101,10 +101,11 @@ Available params:
 
     # DATA TARGET LOADING ########################################################################################
     target_dataloader = get_all_loaders(
-        pre_loaded_images=preloaded_ims[dataset_target],
         device=device,
-        dataset_proportion=dataset_proportions[dataset_target],
         batch_size=batch_size,
+        pre_loaded_images=preloaded_ims[dataset_target],
+        dataset=dataset_target,
+        dataset_proportion=dataset_proportions[dataset_target],
         seed=seed,
         labels_to_use=target_labels
     )
@@ -113,10 +114,11 @@ Available params:
 
     # DATA TEST LOADING ########################################################################################
     test_dataloader = get_all_loaders(
-        pre_loaded_images=preloaded_ims[dataset_test],
         device=device,
-        dataset_proportion=dataset_proportions[dataset_test],
         batch_size=batch_size,
+        pre_loaded_images=preloaded_ims[dataset_test],
+        dataset=dataset_test,
+        dataset_proportion=dataset_proportions[dataset_test],
         seed=seed,
         labels_to_use=test_labels)
 
@@ -240,7 +242,7 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
 if __name__ == '__main__':
     get_scores(
         dataset_target='CIFAR_10',
-        dataset_test='IMAGENET64_VAL',
+        dataset_test='MNIST',
         test_labels=[0, 1],
         transform_test='gaussian_noise',
         scorer='entropy-2-mse',

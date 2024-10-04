@@ -113,7 +113,7 @@ class generic_loader(abstract_dataset_torch):
 
     def setup(self):
         # make sure dataset is downloaded
-        self.download_data
+        self.download_data()
 
         # set vars
         self.set_vars()
