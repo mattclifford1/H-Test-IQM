@@ -5,24 +5,22 @@ import numpy as np
 from tqdm import tqdm
 from PIL import Image
 import torchvision
-from h_test_IQM.datasets.MNIST.VARS import MNIST_RAW_DATA_DIR, MNIST_META_CSV, MNIST_IMAGE_DIR
+from h_test_IQM.datasets.Caltech256.VARS import Caltech256_RAW_DATA_DIR, Caltech256_META_CSV, Caltech256_IMAGE_DIR
 
 
-def download_MNIST(redo_download=False):
+def download_Caltech256(redo_download=False):
     if redo_download == True:
-        shutil.rmtree(MNIST_RAW_DATA_DIR)
+        shutil.rmtree(Caltech256_RAW_DATA_DIR)
     
-    if not os.path.exists(MNIST_RAW_DATA_DIR) or not os.path.exists(MNIST_IMAGE_DIR):
+    if not os.path.exists(Caltech256_RAW_DATA_DIR) or not os.path.exists(Caltech256_IMAGE_DIR):
         # use torch vision to download CIFAR-10 and unzip
-        train = torchvision.datasets.MNIST(root=MNIST_RAW_DATA_DIR, train=True,
-                                            download=True, transform=None)
-        test = torchvision.datasets.MNIST(root=MNIST_RAW_DATA_DIR, train=False,
+        dataset = torchvision.datasets.Caltech256(root=Caltech256_RAW_DATA_DIR,
                                             download=True, transform=None)
         # save to png
-        save_torch_dataset_as_png([train, test], MNIST_IMAGE_DIR)
+        save_torch_dataset_as_png([dataset], Caltech256_IMAGE_DIR)
 
     # delete raw files
-    torch_folder = os.path.join(MNIST_RAW_DATA_DIR, 'MNIST')
+    torch_folder = os.path.join(Caltech256_RAW_DATA_DIR, 'Caltech256')
     if os.path.exists(torch_folder):
         shutil.rmtree(torch_folder)
 
@@ -35,7 +33,7 @@ def save_torch_dataset_as_png(datasets, ims_dir):
     count = 0
     for dataset in datasets:
         name = 'train' if count == 0 else 'test'
-        for i, (im, label) in tqdm(enumerate(dataset), desc=f'Saving {name} MNIST to PNG', leave=True, total=len(dataset)): 
+        for i, (im, label) in tqdm(enumerate(dataset), desc=f'Saving {name} Caltech256 to PNG', leave=True, total=len(dataset)): 
             filename = f'{i}.png'
             im.save(os.path.join(ims_dir, filename))
 
@@ -48,9 +46,9 @@ def save_torch_dataset_as_png(datasets, ims_dir):
                  'label': labels,
                  'numerical_label': one_hot_labels}
     df = pd.DataFrame.from_dict(meta_dict)
-    df.to_csv(MNIST_META_CSV, index=False, header=list(meta_dict.keys()))
+    df.to_csv(Caltech256_META_CSV, index=False, header=list(meta_dict.keys()))
 
 
 if __name__ == '__main__':
-    download_MNIST(redo_download=True)
+    download_Caltech256(redo_download=True)
 

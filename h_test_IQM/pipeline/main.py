@@ -4,9 +4,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import entropy
 from tqdm import tqdm
 
-from h_test_IQM.datasets import DATA_LOADER
+from h_test_IQM.datasets import DATASET_PROPORTIONS
 from h_test_IQM.datasets.torch_loaders import get_preloaded, get_all_loaders
-from h_test_IQM.datasets.numpy_loaders import kodak_loader
 from h_test_IQM.distortions import TRANSFORMS
 from h_test_IQM.scorers import SCORERS
 
@@ -73,20 +72,10 @@ Available params:
         dev mode:   {dev}
     ''')
 
-    if dev == True:
-        dataset_proportions = {'CIFAR_10': 0.005, 
-                               'UNIFORM': 0.005,
-                               'MNIST': 0.005,
-                               'IMAGENET64_TRAIN': 0.0002, 
-                               'IMAGENET64_VAL': 0.0002,
-                               'KODAK': 1}
-    else:
-        dataset_proportions = {'CIFAR_10': dataset_proportion,
-                               'UNIFORM': dataset_proportion,
-                               'MNIST': dataset_proportion,
-                               'IMAGENET64_TRAIN': dataset_proportion, 
-                               'IMAGENET64_VAL': dataset_proportion,
-                               'KODAK': dataset_proportion}
+    # change to full dataset size if not in dev mode
+    if dev == False:
+        for dataset in DATASET_PROPORTIONS:
+            DATASET_PROPORTIONS[dataset] = 1
 
     # check if cuda is available
     if device == 'cuda':
@@ -105,7 +94,7 @@ Available params:
         batch_size=batch_size,
         pre_loaded_images=preloaded_ims[dataset_target],
         dataset=dataset_target,
-        dataset_proportion=dataset_proportions[dataset_target],
+        dataset_proportion=DATASET_PROPORTIONS[dataset_target],
         seed=seed,
         labels_to_use=target_labels
     )
@@ -118,7 +107,7 @@ Available params:
         batch_size=batch_size,
         pre_loaded_images=preloaded_ims[dataset_test],
         dataset=dataset_test,
-        dataset_proportion=dataset_proportions[dataset_test],
+        dataset_proportion=DATASET_PROPORTIONS[dataset_test],
         seed=seed,
         labels_to_use=test_labels)
 
@@ -241,7 +230,7 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
 
 if __name__ == '__main__':
     get_scores(
-        dataset_target='CIFAR_10',
+        dataset_target='Caltech256',
         dataset_test='MNIST',
         test_labels=[0, 1],
         transform_test='gaussian_noise',
