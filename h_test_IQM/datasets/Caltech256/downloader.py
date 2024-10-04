@@ -16,37 +16,37 @@ def download_Caltech256(redo_download=False):
         # use torch vision to download CIFAR-10 and unzip
         dataset = torchvision.datasets.Caltech256(root=Caltech256_RAW_DATA_DIR,
                                             download=True, transform=None)
-        # save to png
-        save_torch_dataset_as_png([dataset], Caltech256_IMAGE_DIR)
+
+        make_meta_data(dataset)
 
     # delete raw files
-    torch_folder = os.path.join(Caltech256_RAW_DATA_DIR, 'Caltech256')
+    torch_folder = os.path.join(Caltech256_RAW_DATA_DIR, 'caltech256')
     if os.path.exists(torch_folder):
         shutil.rmtree(torch_folder)
 
 
-def save_torch_dataset_as_png(datasets, ims_dir):
+def make_meta_data(dataset):
     file_names = []
     labels = []
     one_hot_labels = []
-    os.makedirs(ims_dir, exist_ok=True)
-    count = 0
-    for dataset in datasets:
-        name = 'train' if count == 0 else 'test'
-        for i, (im, label) in tqdm(enumerate(dataset), desc=f'Saving {name} Caltech256 to PNG', leave=True, total=len(dataset)): 
-            filename = f'{i}.png'
-            im.save(os.path.join(ims_dir, filename))
-
-            file_names.append(filename)
-            labels.append(str(label))
-            one_hot_labels.append(label)
-            count += 1
+    print(len(dataset))
+    for i in tqdm(range(len(dataset)), desc=f'Making Caltech256 to meta data'):
+        filename = os.path.join(
+            Caltech256_IMAGE_DIR, f"{dataset.y[i] + 1:03d}_{dataset.index[i]:04d}.jpg")
+        file_names.append(filename)
+        num_label = dataset.y[i]
+        one_hot_labels.append(num_label)
+        labels.append(dataset.categories[num_label][4:])
 
     meta_dict = {'filename': file_names, 
                  'label': labels,
                  'numerical_label': one_hot_labels}
     df = pd.DataFrame.from_dict(meta_dict)
     df.to_csv(Caltech256_META_CSV, index=False, header=list(meta_dict.keys()))
+
+    # move image folder
+    shutil.move(os.path.join(Caltech256_RAW_DATA_DIR, 'caltech256', '256_ObjectCategories'),
+                Caltech256_IMAGE_DIR)
 
 
 if __name__ == '__main__':

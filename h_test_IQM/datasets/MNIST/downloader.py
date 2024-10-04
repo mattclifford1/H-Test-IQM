@@ -34,9 +34,9 @@ def save_torch_dataset_as_png(datasets, ims_dir):
     os.makedirs(ims_dir, exist_ok=True)
     count = 0
     for dataset in datasets:
-        name = 'train' if count == 0 else 'test'
-        for i, (im, label) in tqdm(enumerate(dataset), desc=f'Saving {name} MNIST to PNG', leave=True, total=len(dataset)): 
-            filename = f'{i}.png'
+        name = 'train' if dataset.train else 'test'
+        for (im, label) in tqdm(dataset, desc=f'Saving {name} MNIST to PNG', leave=True, total=len(dataset)): 
+            filename = f'{count}.png'
             im.save(os.path.join(ims_dir, filename))
 
             file_names.append(filename)
