@@ -107,6 +107,10 @@ class generic_loader(abstract_dataset_torch):
             image = image*(self.normalise[1]-self.normalise[0])
             image = image + self.normalise[0]
             image = image.to(self.device)
+            if hasattr(self, 'transformer'):
+                image = self.transformer(image)
+            if image.shape[0] == 1:
+                image = image.expand(3, *image.shape[1:])
             if self.cache_data == True:
                 self.image_dict[filename] = image
         return image

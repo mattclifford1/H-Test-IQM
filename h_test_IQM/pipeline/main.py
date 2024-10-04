@@ -231,8 +231,8 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
 if __name__ == '__main__':
     get_scores(
         dataset_target='Caltech256',
-        dataset_test='MNIST',
-        test_labels=[0, 1],
+        dataset_test='Caltech101',
+        # test_labels=[0, 1],
         transform_test='gaussian_noise',
         scorer='entropy-2-mse',
         # scorer='BRISQUE',

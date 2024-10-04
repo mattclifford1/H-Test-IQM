@@ -21,12 +21,6 @@ class MNIST_LOADER(generic_loader):
         self.dataset_name = 'MNIST'
         self.num_classes = 10
 
-    def _get_image(self, filename):
-        img = super()._get_image(filename)
-        # expand to 3 channels
-        return img.expand(3, *img.shape[1:])
-
-
 if __name__ == '__main__':
     from tqdm import tqdm
     a = MNIST_LOADER()
