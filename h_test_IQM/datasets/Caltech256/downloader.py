@@ -1,11 +1,10 @@
 import os
 import shutil
 import pandas as pd
-import numpy as np
 from tqdm import tqdm
-from PIL import Image
 import torchvision
-from h_test_IQM.datasets.Caltech256.VARS import Caltech256_RAW_DATA_DIR, Caltech256_META_CSV, Caltech256_IMAGE_DIR
+import json
+from h_test_IQM.datasets.Caltech256.VARS import Caltech256_RAW_DATA_DIR, Caltech256_META_CSV, Caltech256_IMAGE_DIR, Caltech256_LABELS
 
 
 def download_Caltech256(redo_download=False):
@@ -49,6 +48,14 @@ def make_meta_data(dataset):
     # move image folder
     shutil.move(os.path.join(Caltech256_RAW_DATA_DIR, 'caltech256', '256_ObjectCategories'),
                 Caltech256_IMAGE_DIR)
+    
+    # save unique labels
+    unique_labels = list(set(labels))
+    unique_labels.sort()
+    unique_one_hot_labels = list(set(one_hot_labels))
+    unique_one_hot_labels.sort()
+    with open(Caltech256_LABELS, 'w') as f:
+        json.dump({'labels':unique_labels, 'numerical':unique_one_hot_labels}, f)
 
 
 if __name__ == '__main__':

@@ -5,8 +5,9 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 from PIL import Image
+import json
 import torchvision
-from h_test_IQM.datasets.CIFAR_10.VARS import CIFAR_10_RAW_DATA_DIR, CIFAR_10_META_CSV, CIFAR_10_IMAGE_DIR
+from h_test_IQM.datasets.CIFAR_10.VARS import CIFAR_10_RAW_DATA_DIR, CIFAR_10_META_CSV, CIFAR_10_IMAGE_DIR, CIFAR_10_LABELS
 
 
 def download_CIFAR_10(redo_download=False):
@@ -70,6 +71,14 @@ def save_batches_as_png(ims_dir):
                  'numerical_label': one_hot_labels}
     df = pd.DataFrame.from_dict(meta_dict)
     df.to_csv(CIFAR_10_META_CSV, index=False, header=list(meta_dict.keys()))
+
+    # save unique labels
+    unique_labels = list(set(labels))
+    unique_labels.sort()
+    unique_one_hot_labels = list(set(one_hot_labels))
+    unique_one_hot_labels.sort()
+    with open(CIFAR_10_LABELS, 'w') as f:
+        json.dump({'labels':unique_labels, 'numerical':unique_one_hot_labels}, f)
 
 
 if __name__ == '__main__':

@@ -1,11 +1,10 @@
 import os
 import shutil
 import pandas as pd
-import numpy as np
 from tqdm import tqdm
-from PIL import Image
+import json
 import torchvision
-from h_test_IQM.datasets.MNIST.VARS import MNIST_RAW_DATA_DIR, MNIST_META_CSV, MNIST_IMAGE_DIR
+from h_test_IQM.datasets.MNIST.VARS import MNIST_RAW_DATA_DIR, MNIST_META_CSV, MNIST_IMAGE_DIR, MNIST_LABELS
 
 
 def download_MNIST(redo_download=False):
@@ -47,8 +46,17 @@ def save_torch_dataset_as_png(datasets, ims_dir):
     meta_dict = {'filename': file_names, 
                  'label': labels,
                  'numerical_label': one_hot_labels}
+    
     df = pd.DataFrame.from_dict(meta_dict)
     df.to_csv(MNIST_META_CSV, index=False, header=list(meta_dict.keys()))
+
+    # save unique labels
+    unique_labels = list(set(labels))
+    unique_labels.sort()
+    unique_one_hot_labels = list(set(one_hot_labels))
+    unique_one_hot_labels.sort()
+    with open(MNIST_LABELS, 'w') as f:
+        json.dump({'labels':unique_labels, 'numerical':unique_one_hot_labels}, f)
 
 
 if __name__ == '__main__':
