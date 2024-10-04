@@ -140,16 +140,21 @@ class generic_loader(abstract_dataset_torch):
             self.numerical_label = [self.numerical_label[i]
                                     for i in self.indicies_to_use]
 
-    def get_images_dict(self):
+    def get_images_dict(self, inds='all'):
         '''get dict of all pre loaded and processed images - useful to pass to other dataset
-        so that you only have to read from file and process once'''
-        images = {}
-        for ind in tqdm(range(len(self.labels)), desc=f'Loading {self.dataset_name}', leave=False):
+        so that you only have to read from file and process once
+        
+        N.B. self.cache_data must be set to True to use this function
+        '''
+        if self.cache_data == False:
+            raise ValueError('cache_data must be set to True to use this function')
+        if inds == 'all':
+            inds = range(len(self.labels))
+        for ind in tqdm(inds, desc=f'Loading {self.dataset_name}', leave=False):
             filename = self.filenames[ind]
-            # get image
-            image = self._get_image(filename)
-            images[filename] = image
-        return images
+            # get image -- will cache to self.image_dict
+            _ = self._get_image(filename)
+        return self.image_dict
 
     def get_numerical_labels(self):
         return self.numerical_label

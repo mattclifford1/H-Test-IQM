@@ -35,7 +35,8 @@ def get_scores(dataset_target='CIFAR_10',
                test='plot_hist',
                device='cuda',
                batch_size=32,
-               dataset_proportion=1,
+               dataset_proportion_target=1,
+               dataset_proportion_test=1,
                dev=False,
                help=False,
                seed=0,
@@ -73,9 +74,9 @@ Available params:
     ''')
 
     # change to full dataset size if not in dev mode
-    if dev == False:
-        for dataset in DATASET_PROPORTIONS:
-            DATASET_PROPORTIONS[dataset] = 1
+    if dev == True:
+        dataset_proportion_target = DATASET_PROPORTIONS[dataset_target]
+        dataset_proportion_test = DATASET_PROPORTIONS[dataset_test]
 
     # check if cuda is available
     if device == 'cuda':
@@ -84,37 +85,16 @@ Available params:
                 print('cuda not available, using cpu')
             device = 'cpu'
 
-    # pre-data loading ########################################################################################
+    # INIT PRELOADED ########################################################################################
     if preloaded_ims == None:
-        preloaded_ims = fetch_preloaded([dataset_target, dataset_test], device=device, dev=dev)
-
-    # DATA TARGET LOADING ########################################################################################
-    target_dataloader = get_all_loaders(
-        device=device,
-        batch_size=batch_size,
-        pre_loaded_images=preloaded_ims[dataset_target],
-        dataset=dataset_target,
-        dataset_proportion=DATASET_PROPORTIONS[dataset_target],
-        seed=seed,
-        labels_to_use=target_labels
-    )
-    # elif dataset_target == 'KODAK':
-    #     target_dataloader = kodak_loader()
-
-    # DATA TEST LOADING ########################################################################################
-    test_dataloader = get_all_loaders(
-        device=device,
-        batch_size=batch_size,
-        pre_loaded_images=preloaded_ims[dataset_test],
-        dataset=dataset_test,
-        dataset_proportion=DATASET_PROPORTIONS[dataset_test],
-        seed=seed,
-        labels_to_use=test_labels)
-
-    if _print == True:
-        print(f'''num target samples: {len(target_dataloader.dataset)
-                            }\nnum test samples: {len(test_dataloader.dataset)}\n''')
-
+        preloaded_ims = {}
+    if not isinstance(preloaded_ims, dict):
+        raise ValueError(f'incorrect preloaded_ims type: {type(preloaded_ims)}, needs to be none of dict')
+    # initialise as empty if not already got (when scoring will be cached to preloaded_ims)
+    if dataset_target not in preloaded_ims:
+        preloaded_ims[dataset_target] = {}
+    if dataset_test not in preloaded_ims:
+        preloaded_ims[dataset_test] = {}
 
     # DISTORTIONS ########################################################################################
     if transform_target in TRANSFORMS:
@@ -136,17 +116,51 @@ Available params:
 
 
     # TESTING ########################################################################################
+    # DATA TARGET LOADING ########################################################################################
+    target_dataloader = get_all_loaders(
+        device=device,
+        batch_size=batch_size,
+        pre_loaded_images=preloaded_ims[dataset_target],
+        dataset=dataset_target,
+        dataset_proportion=dataset_proportion_target,
+        seed=seed,
+        labels_to_use=target_labels
+    )
     if dev == True:
         if _print == True:
             print('scoring target')
     scores_target = get_sample_from_scorer(
         target_dataloader, transform_func_target, model, name='scoring target')
+    
+    # get any cached images to re use in the test
+    preloaded_ims[dataset_target] = target_dataloader.dataset.image_dict
+
+    # DATA TEST LOADING ########################################################################################
+    # get test dataset (use cached data from target is possible)
+    test_dataloader = get_all_loaders(
+        device=device,
+        batch_size=batch_size,
+        # pre_loaded_images=preloaded_ims[dataset_test],
+        pre_loaded_images={},
+        dataset=dataset_test,
+        dataset_proportion=dataset_proportion_test,
+        seed=seed,
+        labels_to_use=test_labels)
+
     if dev == True:
         if _print == True:
             print('scoring test')
     scores_test = get_sample_from_scorer(
         test_dataloader, transform_func_test, model, name='scoring test')
+
+    # get any cached images to return
+    preloaded_ims[dataset_test] = test_dataloader.dataset.image_dict
     
+    if _print == True:
+        print(f'''num target samples: {len(target_dataloader.dataset)
+                            }\nnum test samples: {len(test_dataloader.dataset)}\n''')
+    
+    # MAKE PDFs ########################################################################################
     results = {}
     dist_target, dist_test, target_bins, test_bins = samples_to_pdf(
         scores_target, scores_test, num_bins=50)
@@ -164,8 +178,10 @@ Available params:
         plt.legend()
         plt.show()
 
-    
-    return scores_target, scores_test, results
+    return {'scores_target': scores_target, 
+            'scores_test': scores_test, 
+            'results': results,
+            'preloaded_ims': preloaded_ims}
 
 
 def plot_hist(dist, bins, name=''):
