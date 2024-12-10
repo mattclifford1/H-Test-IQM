@@ -47,14 +47,30 @@ def get_scores(dataset_target='CIFAR_10',
 Pipeline to test an image dataset compared to a target distribution.
               
 Available params:
+                        --- DATASETS ---
     dataset_target: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
     dataset_test: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
+    dataset_proportion_target: float
+    dataset_proportion_test: float
+              
+                        --- LABELS ---
+    target_labels: 'all', list of labels
+    test_labels: 'all', list of labels
+              
+                        --- TRANSFORMS ---
     transform_target: None, 'epsilon_noise' 'gaussian_noise', None
     transform_test: None, See above
+              
+                        --- SCORERS ---
     scorer: 'entropy-2-mse'
+              
+                        --- TESTING ---
     test: 'plot_hist', 'KL' (can be a list)
+    
+                        --- EXTRAS ---
     device: 'cuda', 'cpu'
     batch_size: int
+    seed: int
     dev: bool
         ''')
         return
