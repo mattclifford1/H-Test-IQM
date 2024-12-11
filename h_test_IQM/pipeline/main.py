@@ -71,7 +71,7 @@ Available params:
     device: 'cuda', 'cpu'
     batch_size: int
     seed: int
-    dev: bool
+    dev: bool (If True, the code will run on very small data size)
         ''')
         return
     if _print == True:
