@@ -46,7 +46,7 @@ def run_multiple_pipelines_diff(pipeline_list, cache_data=True):
     for run in pipeline_list:
         test_result = []
         if 'name' not in run:
-            run['name'] = run['dataset']
+            run['name'] = f"{run['dataset_test']} - {run['dataset_target']}"
         for i in tqdm(range(run['runs']), desc=run['name']):
             outputs = get_scores(
                 dataset_target=run['dataset_target'],

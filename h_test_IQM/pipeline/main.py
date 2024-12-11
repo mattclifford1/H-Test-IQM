@@ -149,7 +149,8 @@ Available params:
         target_dataloader, transform_func_target, model, name='scoring target')
     
     # get any cached images to re use in the test
-    preloaded_ims[dataset_target] = target_dataloader.dataset.image_dict
+    if hasattr(target_dataloader.dataset, 'image_dict'):
+        preloaded_ims[dataset_target] = target_dataloader.dataset.image_dict
 
     # DATA TEST LOADING ########################################################################################
     # get test dataset (use cached data from target is possible)
@@ -170,7 +171,8 @@ Available params:
         test_dataloader, transform_func_test, model, name='scoring test')
 
     # get any cached images to return
-    preloaded_ims[dataset_test] = test_dataloader.dataset.image_dict
+    if hasattr(test_dataloader.dataset, 'image_dict'):
+        preloaded_ims[dataset_test] = test_dataloader.dataset.image_dict
     
     if _print == True:
         print(f'''num target samples: {len(target_dataloader.dataset)
