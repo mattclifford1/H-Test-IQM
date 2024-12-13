@@ -41,7 +41,8 @@ def get_scores(dataset_target='CIFAR_10',
                help=False,
                seed=0,
                _print=True,
-               preloaded_ims=None):
+               preloaded_ims=None,
+               shift_seed_test=0):
     if help == True:
         print('''
 Pipeline to test an image dataset compared to a target distribution.
@@ -161,7 +162,7 @@ Available params:
         pre_loaded_images={},
         dataset=dataset_test,
         dataset_proportion=dataset_proportion_test,
-        seed=seed,
+        seed=seed+shift_seed_test,
         labels_to_use=test_labels)
 
     if dev == True:
@@ -193,6 +194,8 @@ Available params:
     if 'plot_hist' in test:
         plot_hist(dist_target, target_bins, name='target')
         plot_hist(dist_test, test_bins, name='test')
+        plt.xlabel('Score')
+        plt.ylabel('Density')
         plt.legend()
         plt.show()
 
