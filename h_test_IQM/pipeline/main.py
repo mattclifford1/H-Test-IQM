@@ -1,13 +1,31 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import entropy
 from tqdm import tqdm
 
 from h_test_IQM.datasets import DATASET_PROPORTIONS
 from h_test_IQM.datasets.torch_loaders import get_preloaded, get_all_loaders
 from h_test_IQM.distortions import TRANSFORMS
 from h_test_IQM.scorers import SCORERS
+from h_test_IQM.pipeline.h_tests import compare, DIVERGENCES, TESTS
+
+# the scorer resizes every image to this before encoding. CIFAR is 32x32, so the default
+# upsamples it 8x -- see FINDINGS.md 3.6. Kept as the default so old numbers reproduce.
+DEFAULT_IM_SIZE = (256, 256)
+
+# Scorers are stateless at inference but expensive to build (entropy_AE reads a checkpoint off
+# disk every time). The repeated-run experiments call get_scores hundreds of times with the same
+# scorer, where that rebuild dominates the runtime, so keep one instance per configuration.
+_SCORER_CACHE = {}
+
+
+def _get_scorer(scorer, im_size, device):
+    if scorer not in SCORERS:
+        raise ValueError(f'{scorer} scorer needs to be one of {list(SCORERS.keys())}')
+    key = (scorer, tuple(im_size), device)
+    if key not in _SCORER_CACHE:
+        _SCORER_CACHE[key] = SCORERS[scorer](im_size=tuple(im_size), device=device)
+    return _SCORER_CACHE[key]
 
 def _get_preloaded(dataset='CIFAR_10', device='cpu'):
     if dataset in ['CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL']:
@@ -42,7 +60,13 @@ def get_scores(dataset_target='CIFAR_10',
                seed=0,
                _print=True,
                preloaded_ims=None,
-               shift_seed_test=0):
+               shift_seed_test=0,
+               im_size=DEFAULT_IM_SIZE,
+               num_bins=50,
+               alpha=0.5,
+               n_permutations=0,
+               partition_target=None,
+               partition_test=None):
     if help == True:
         print('''
 Pipeline to test an image dataset compared to a target distribution.
@@ -51,23 +75,32 @@ Available params:
                         --- DATASETS ---
     dataset_target: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
     dataset_test: 'CIFAR_10', 'IMAGENET64_TRAIN', 'IMAGENET64_VAL', 'KODAK'
-    dataset_proportion_target: float
+    dataset_proportion_target: float -- the actual fraction of the dataset (0-1)
     dataset_proportion_test: float
-              
+    partition_target: None, 'a', 'b' -- disjoint halves, for a guaranteed-clean control.
+    partition_test:   'a' vs 'b' with the same seed share no images at all.
+
                         --- LABELS ---
     target_labels: 'all', list of labels
     test_labels: 'all', list of labels
-              
+
                         --- TRANSFORMS ---
     transform_target: None, 'epsilon_noise' 'gaussian_noise', None
     transform_test: None, See above
-              
+
                         --- SCORERS ---
-    scorer: 'entropy-2-mse'
-              
+    scorer: 'entropy-2-mse', 'BRISQUE', 'pixel_std', 'jpeg_bytes'
+    im_size: (H, W) every image is resized to this before scoring. Default (256, 256).
+
                         --- TESTING ---
-    test: 'plot_hist', 'KL' (can be a list)
-    
+    test: 'plot_hist', and any of
+          divergences (effect size):  'KL', 'JS', 'wasserstein'
+          tests (statistic + p-value): 'KS', 'CVM', 'AD'
+          or 'all' for every statistic. Can be a list.
+    num_bins: int, binning for the binned divergences (KL, JS)
+    alpha: float, count smoothing for the binned divergences (0.5 = Krichevsky-Trofimov)
+    n_permutations: int, >0 adds a permutation p-value to each divergence
+
                         --- EXTRAS ---
     device: 'cuda', 'cpu'
     batch_size: int
@@ -126,10 +159,7 @@ Available params:
         
 
     # SCORER ########################################################################################
-    if scorer in SCORERS:
-        model = SCORERS[scorer](im_size=(256, 256), device=device)
-    else: 
-        raise ValueError(f'{scorer} scorer needs to be one of {SCORERS.keys()}')
+    model = _get_scorer(scorer, im_size, device)
 
 
     # TESTING ########################################################################################
@@ -141,7 +171,8 @@ Available params:
         dataset=dataset_target,
         dataset_proportion=dataset_proportion_target,
         seed=seed,
-        labels_to_use=target_labels
+        labels_to_use=target_labels,
+        partition=partition_target,
     )
     if dev == True:
         if _print == True:
@@ -163,7 +194,8 @@ Available params:
         dataset=dataset_test,
         dataset_proportion=dataset_proportion_test,
         seed=seed+shift_seed_test,
-        labels_to_use=test_labels)
+        labels_to_use=test_labels,
+        partition=partition_test)
 
     if dev == True:
         if _print == True:
@@ -179,19 +211,30 @@ Available params:
         print(f'''num target samples: {len(target_dataloader.dataset)
                             }\nnum test samples: {len(test_dataloader.dataset)}\n''')
     
-    # MAKE PDFs ########################################################################################
-    results = {}
-    dist_target, dist_test, target_bins, test_bins = samples_to_pdf(
-        scores_target, scores_test, num_bins=50)
-    if 'KL' in test:
-        # use the histogram of score samples to get some sort of "PMF/PDF"
-        kl = entropy(pk=dist_target, 
-                     qk=dist_test)
-        if _print == True:
-            print(f'KL divergence: {kl}')
-        results['KL'] = kl
+    # COMPARE ########################################################################################
+    # `test` may be a single name or a list. Everything that isn't 'plot_hist' is a statistic.
+    requested = [test] if isinstance(test, str) else list(test)
+    stat_names = [t for t in requested if t != 'plot_hist']
 
-    if 'plot_hist' in test:
+    results = {}
+    if stat_names:
+        if 'all' in stat_names:
+            stat_names = list(DIVERGENCES) + list(TESTS)
+        unknown = [t for t in stat_names if t not in DIVERGENCES and t not in TESTS]
+        if unknown:
+            raise ValueError(
+                f'unknown test(s) {unknown}, expected any of '
+                f'{list(DIVERGENCES) + list(TESTS)} (or "plot_hist")')
+        results = compare(scores_target, scores_test, which=stat_names,
+                          num_bins=num_bins, alpha=alpha,
+                          n_permutations=n_permutations, seed=seed)
+        if _print == True:
+            for name, value in results.items():
+                print(f'{name}: {value:.6g}')
+
+    if 'plot_hist' in requested:
+        dist_target, dist_test, target_bins, test_bins = samples_to_pdf(
+            scores_target, scores_test, num_bins=num_bins)
         plot_hist(dist_target, target_bins, name='target')
         plot_hist(dist_test, test_bins, name='test')
         plt.xlabel('Score')
@@ -213,8 +256,13 @@ def plot_hist(dist, bins, name=''):
 
 
 def samples_to_pdf(sample1, sample2, num_bins=10):
-    # convert scores into PDF via normalised histograms
-    # use two samples for both on the same range
+    '''
+    Two samples -> two density histograms over a shared range, FOR PLOTTING.
+
+    Deliberately unsmoothed: an empty bin should show as empty. Divergences must not be
+    computed from these -- use h_tests.samples_to_pmf, which smooths the counts and is
+    therefore invariant to the units of the score (see FINDINGS.md 3.1).
+    '''
     min_val = min(sample1.min(), sample2.min())
     max_val = max(sample1.max(), sample2.max())
     range_vals = (min_val, max_val)
@@ -222,15 +270,6 @@ def samples_to_pdf(sample1, sample2, num_bins=10):
         sample1, bins=num_bins, range=range_vals, density=True)
     dist2, bins2 = np.histogram(
         sample2, bins=num_bins, range=range_vals, density=True)
-    
-    # numerical stability if any bin is 0
-    if np.any(dist1 == 0) or np.any(dist2 == 0):
-        dist1 += 1e-6
-        dist2 += 1e-6
-        # normalise
-        dist1 /= dist1.sum()
-        dist2 /= dist2.sum()
-
     return dist1, dist2, bins1, bins2
 
 
@@ -250,9 +289,9 @@ def get_sample_from_scorer(dataset, transform, scorer, name='scorer'):
         # score
         score = scorer(img)
         if len(score.shape) == 2:
+            # multi-feature scorer (centers=5 / spacial=True): one row per image
             for s in score:
                 scores.append(s)
-            scores.append(score)
         else:
             scores.append(score)
 

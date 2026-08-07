@@ -18,28 +18,35 @@ def get_classes(dataset='CIFAR_10', numerical=False):
     if numerical == True:
         return loader.get_numerical_labels()
     else:
-        return loader.get_labels()
+        return loader.get_str_labels()
 
 
-def get_all_loaders(props=[0.4, 0.3, 0.3], 
-                    device='cpu', 
-                    batch_size=32, 
-                    pre_loaded_images=None, 
+def get_all_loaders(device='cpu',
+                    batch_size=32,
+                    pre_loaded_images=None,
                     dataset='CIFAR_10',
                     dataset_proportion=0.5,
                     seed=0,
-                    labels_to_use='all'):
+                    labels_to_use='all',
+                    partition=None):
     '''
-    get train, val and test torch loaders from CIFAR or IMAGENET 
+    get a torch loader for a (subsample of a) dataset
         set pre_loaded_images to True to load all images into RAM/VRAM
         device = 'cpu' or 'cuda'
-        dataset_proportion between 0 and 1 to reduce the amount of training data
+        dataset_proportion: fraction of the dataset to use, between 0 and 1. This is the
+            ACTUAL fraction -- there used to be an unused [0.4, 0.3, 0.3] train/val/test
+            split applied first, which silently made dataset_proportion=1 mean 40% of the
+            data (see FINDINGS.md 3.4).
+        partition: None, 'a' or 'b'. Splits the shuffled indices in half first and draws
+            from that half only, so 'a' and 'b' at the SAME seed are guaranteed disjoint.
+            This is how to build an honest control -- a different seed only re-shuffles and
+            gives chance-level overlap, not disjointness.
         dataset = 'CIFAR_10' or 'IMAGENET64_VAL' or 'IMAGENET64_TRAIN' or 'UNIFORM'(uniform noise data)
     '''
-    if dataset == 'kodak':
+    if dataset.upper() == 'KODAK':
         return DATA_LOADER['KODAK']()
-    
-    # get inds - split into train, val and test
+
+    # get the pool of indices to draw from
     if labels_to_use == 'all':
         total = TOTAL_INSTANCES[dataset]
         all_inds_to_use = list(range(total))
@@ -57,13 +64,21 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
             if l in labels_to_use:
                 all_inds_to_use.append(i)
 
-    train_inds, val_inds, test_inds = get_indicies(
-        props, total_instances=all_inds_to_use, seed=seed)
-    # reduce the amount of training data
+    # shuffle once, then optionally take a disjoint half
+    if partition is None:
+        train_inds, = get_indicies([1.0], total_instances=all_inds_to_use, seed=seed)
+    elif partition in ('a', 'b'):
+        half_a, half_b = get_indicies(
+            [0.5, 0.5], total_instances=all_inds_to_use, seed=seed)
+        train_inds = half_a if partition == 'a' else half_b
+    else:
+        raise ValueError(f"partition needs to be None, 'a' or 'b', got: {partition}")
+
+    # reduce the amount of data
     if not isinstance(dataset_proportion, str):
         train_total = max(min(int(dataset_proportion*len(train_inds)), len(train_inds)), 1)
         train_inds = train_inds[:train_total]   # inds are shuffled already so we can take a random sample
-    
+
     # load images into RAM/VRAM
     if pre_loaded_images == True:
         pre_loaded_images = get_preloaded(dataset=dataset, device=device)
@@ -74,8 +89,6 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
             raise ValueError(f'incorrect pre_loaded_images type: {type(pre_loaded_images)}')
 
     # get loaders
-    # val_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=val_inds, image_dict=pre_loaded_images)
-    # test_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=test_inds, image_dict=pre_loaded_images)
     if not isinstance(dataset_proportion, str):
         train_loader = DATA_LOADER[dataset](normalise=NORMALISE, indicies_to_use=train_inds, image_dict=pre_loaded_images)
     elif dataset_proportion == 'uniform': # get uniform noise loader
@@ -90,14 +103,6 @@ def get_all_loaders(props=[0.4, 0.3, 0.3],
         raise ValueError(f'Cannot use trainset type/size: {dataset_proportion}')
     # get torch loaders
     train_dataloader = DataLoader(train_loader,  # type: ignore
-                                batch_size=batch_size, 
+                                batch_size=batch_size,
                                 shuffle=True)
-    # val_dataloader = DataLoader(val_loader,  # type: ignore
-    #                             batch_size=batch_size, 
-    #                             shuffle=False,
-    #                             drop_last=False)
-    # test_dataloader = DataLoader(test_loader,  # type: ignore
-    #                             batch_size=batch_size, 
-    #                             shuffle=False,
-    #                             drop_last=False)
-    return train_dataloader#, val_dataloader, test_dataloader, train_total
+    return train_dataloader

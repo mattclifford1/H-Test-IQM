@@ -1,0 +1,91 @@
+==============================================================================
+MAIN TABLE  (n=4000 per side, size-matched, im_size=256)
+==============================================================================
+
+-- KS --
+scorer               entropy-2-mse  BRISQUE  jpeg_bytes  pixel_std  pixel_entropy
+comparison                                                                       
+control-disjoint            0.0240   0.0105      0.0213     0.0227         0.0152
+cifar10-vs-cifar100         0.0372   0.0370      0.0280     0.0512         0.0755
+cifar-vs-dtd                0.0450   0.8665      0.9577     0.1278         0.1685
+cifar-vs-imagenet64         0.1190   0.9200      0.6737     0.0867         0.0673
+cifar-vs-oneclass           0.1520   0.2000      0.2515     0.2090         0.2522
+cifar-vs-uniform            0.3120   1.0000      1.0000     0.5308         0.6615
+
+-- KL --
+scorer               entropy-2-mse  BRISQUE  jpeg_bytes  pixel_std  pixel_entropy
+comparison                                                                       
+control-disjoint            0.0088   0.0099      0.0083     0.0136         0.0098
+cifar10-vs-cifar100         0.0134   0.0179      0.0183     0.0173         0.0229
+cifar-vs-dtd                0.0230   3.7626      3.6536     0.0966         0.0877
+cifar-vs-imagenet64         0.0448   2.9329      1.1895     0.0359         0.0185
+cifar-vs-oneclass           0.0768   0.2041      0.2800     0.2520         0.1874
+cifar-vs-uniform            1.8632   5.7622      6.2188     4.6782         4.9371
+
+-- reject at alpha=0.05? (control must accept) --
+scorer              entropy-2-mse BRISQUE jpeg_bytes pixel_std pixel_entropy
+comparison                                                                  
+control-disjoint           accept  accept     accept    accept        accept
+cifar10-vs-cifar100        REJECT  REJECT     accept    REJECT        REJECT
+cifar-vs-dtd               REJECT  REJECT     REJECT    REJECT        REJECT
+cifar-vs-imagenet64        REJECT  REJECT     REJECT    REJECT        REJECT
+cifar-vs-oneclass          REJECT  REJECT     REJECT    REJECT        REJECT
+cifar-vs-uniform           REJECT  REJECT     REJECT    REJECT        REJECT
+
+==============================================================================
+RESOLUTION SWEEP -- entropy-2-mse  (KS statistic)
+==============================================================================
+im_size                32     64     128    256
+comparison                                     
+control-disjoint    0.0243 0.0177 0.0205 0.0240
+cifar10-vs-cifar100 0.0125 0.0215 0.0280 0.0372
+cifar-vs-dtd        0.0350 0.0473 0.0395 0.0450
+cifar-vs-imagenet64 0.0372 0.0483 0.0693 0.1190
+cifar-vs-oneclass   0.0195 0.0565 0.0953 0.1520
+cifar-vs-uniform    0.0483 0.0675 0.1780 0.3095
+
+==============================================================================
+RESOLUTION SWEEP -- jpeg_bytes  (KS statistic)
+==============================================================================
+im_size                32     64     128    256
+comparison                                     
+control-disjoint    0.0145 0.0155 0.0243 0.0213
+cifar10-vs-cifar100 0.0182 0.0248 0.0267 0.0280
+cifar-vs-dtd        0.2988 0.6398 0.8462 0.9577
+cifar-vs-imagenet64 0.0717 0.8020 0.6128 0.6737
+cifar-vs-oneclass   0.2953 0.2660 0.2610 0.2515
+cifar-vs-uniform    1.0000 1.0000 1.0000 1.0000
+
+==============================================================================
+POWER -- detection rate at alpha=0.05, % of repeats rejecting
+==============================================================================
+n                    50    100   200   500   1000  2000  4000
+comparison                                                   
+control-disjoint       10    20    10     0     0    10    10
+cifar10-vs-cifar100    10     0     0    20    30    70    90
+cifar-vs-dtd            0     0     0    10    50    80   100
+cifar-vs-imagenet64    30    40    70    90   100   100   100
+cifar-vs-oneclass      20    20   100   100   100   100   100
+cifar-vs-uniform      100   100   100   100   100   100   100
+
+smallest n reaching 80% detection:
+  control-disjoint       >4000
+  cifar10-vs-cifar100    4000
+  cifar-vs-dtd           2000
+  cifar-vs-imagenet64    500
+  cifar-vs-oneclass      200
+  cifar-vs-uniform       50
+
+(control-disjoint is the false-positive rate -- it should stay near 5%)
+
+==============================================================================
+CALIBRATION -- false-positive rate under a true null
+==============================================================================
+  n=200    18/500 =  3.6% [2.1%, 5.6%]   mean p=0.548   uniformity p=4.54e-06
+  n=1000   18/500 =  3.6% [2.1%, 5.6%]   mean p=0.515   uniformity p=0.127
+  n=4000   19/500 =  3.8% [2.3%, 5.9%]   mean p=0.533   uniformity p=0.00655
+
+  nominal alpha=5%. A high mean p and a tiny uniformity p mean the test is
+  CONSERVATIVE -- safe (it never over-rejects), but it costs power. Two causes
+  cross over: the asymptotic KS approximation dominates at small n, ties in the
+  discrete score dominate at large n. See FINDINGS.md 2.7.
