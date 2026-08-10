@@ -22,7 +22,7 @@ import pandas as pd
 from scipy.stats import binomtest, kstest
 
 from h_test_IQM.pipeline import get_scores
-from experiments.run_density_grid import RESULTS_DIR
+from experiments.prior.run_density_grid import RESULTS_DIR
 
 SAMPLE_SIZES = [200, 1000, 4000]
 ALPHA = 0.05

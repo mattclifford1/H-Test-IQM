@@ -1,27 +1,41 @@
 # Findings
 
 State of the `H-Test-IQM` project. Originally reconstructed from the dormant repo at commit
-`111560d` (2024-12-13); **§2.2 and §2.4–2.7 are new results from the August 2026 re-run** after the
-methodological fixes in §3 were applied.
+`111560d` (2024-12-13); **§2.2 and §2.4–2.7 are from the August 2026 re-run** after the
+methodological fixes in §3 were applied, and **§2b is the six-experiment suite** built on the
+score cache, which supersedes §2.4 and §2.5.
 
 Every number is quoted from a **committed notebook output cell**, from a CSV in `results/`, or
 was **recomputed here** (with `~/anaconda3/envs/h_data/bin/python`). Nothing is read off a figure.
 
-> **Headline, after the fixes and the re-run.**
+> **Headline, after the fixes, the re-run, and the six-experiment suite (§2b).**
 >
 > 1. **The method works and is calibrated.** With real hypothesis tests in place, the disjoint
->    control accepts (p = 0.20–0.98 across all five scorers), every genuine shift rejects at
->    n = 4000, and the measured false-positive rate is 3.6% [2.1%, 5.6%] against a nominal 5% —
->    mildly conservative at small n, never over-rejecting (§2.7). There is also now a power curve
->    saying how many images each kind of shift needs (§2.6). That part is defensible.
-> 2. **But the perceptual autoencoder loses to a JPEG byte count on every comparison tested**
->    (§2.4). This is the control the paper most needed and it does not go the way the framing
->    assumes.
-> 3. **And the autoencoder only works because of an accident** — the hardcoded 8× upsample. At
->    CIFAR's native 32×32 it fails to detect class removal at all (§2.5).
+>    control accepts, every genuine shift rejects at n = 4000, and the false-positive rate is
+>    4.1–5.1% against a nominal 5% across the whole n grid at 1000 repeats per cell — mildly
+>    conservative at small n, never over-rejecting (§2.7, §2.9.1). There is a power curve saying
+>    how many images each shift needs (§2.9.1) and a contamination sweep giving the smallest
+>    detectable fraction of foreign data (§2.9.2). That part is defensible.
+> 2. **The autoencoder's *scalar* loses to a JPEG byte count — but the autoencoder does not.**
+>    Averaging the 64×16×16 latent into one number is what costs it. Keeping one `+1`-ratio per
+>    channel and testing in R^64 takes CIFAR-10 vs CIFAR-100 from 41.5% to **88%** detection
+>    where JPEG bytes manage 19% (§2.9.5). §2.4 is real but is a finding about the statistic,
+>    not the scorer.
+> 3. **The upsampling dependence has a mechanism, and it is not perception.** At 32px the latent
+>    is only 256 bits, so the occupancy score cannot have a standard deviation below the binomial
+>    floor of 0.031 — and every dataset, uniform noise included, sits exactly on it. The 8×
+>    upsample buys latent elements to average over, nothing more (§2.9.3).
+> 4. **The stated premise fails outright.** Autoencoders trained on *uniform noise* discriminate
+>    these datasets as well as ones trained on natural images — 100.1% recovery (§2.9.6). The
+>    statistic is not measuring absorbed natural-image statistics.
+> 5. **Two of the four headline comparisons are confounded.** `cifar-vs-imagenet64` is largely a
+>    resampling artifact (§2.9.3), and `cifar-vs-oneclass` — the only resampling-clean one — gives
+>    the autoencoder *no signal at all* at native resolution.
 >
-> None of this kills the project, but it does redirect it: the defensible contribution is the
-> *pipeline* (score → 1-D two-sample test → calibrated p-value), not the choice of scorer. See §5.
+> The redirect: the defensible contributions are the **pipeline** (score → two-sample test →
+> calibrated p-value) and the **multivariate result** (§2.9.5), which is the one place the
+> perceptual scorer beats the trivial baselines. The premise, the scalar statistic, and the
+> checkpoint choice all need rewriting. See §5.
 
 ---
 
@@ -78,7 +92,7 @@ Two things the figures show that the table does not:
 
 ### 2.2 Density comparison, re-run with real hypothesis tests (Aug 2026)
 
-`results/density_grid.csv`, `experiments/run_density_grid.py`. n = 4000 **per side, size-matched
+`results/prior/density_grid.csv`, `experiments/prior/run_density_grid.py`. n = 4000 **per side, size-matched
 everywhere**, `im_size=256`, 1000 permutations. `entropy-2-mse` column:
 
 | comparison | KL | KS | KS p-value | verdict |
@@ -129,7 +143,7 @@ say only that the density comparison in §2.1 is stronger and simpler.
 
 ### 2.4 The baselines beat the perceptual autoencoder
 
-`results/density_grid.csv`. Same six comparisons, same n = 4000, five scorers. **KS statistic**
+`results/prior/density_grid.csv`. Same six comparisons, same n = 4000, five scorers. **KS statistic**
 (higher = better separation; the control row should be near zero for all of them):
 
 | comparison | entropy-2-mse | BRISQUE | jpeg_bytes | pixel_std | pixel_entropy |
@@ -181,7 +195,7 @@ would find this immediately.
 
 ### 2.5 The autoencoder's power comes from the upsampling accident
 
-`results/resolution_sweep.csv`. Same comparisons, `entropy-2-mse`, sweeping `im_size`. KS:
+`results/prior/resolution_sweep.csv`. Same comparisons, `entropy-2-mse`, sweeping `im_size`. KS:
 
 | comparison | 32 | 64 | 128 | 256 |
 |---|---|---|---|---|
@@ -208,7 +222,7 @@ never justified in the code, and the method's apparent effectiveness depends on 
 
 ### 2.6 How many images you need — the practically useful result
 
-`results/power_curve.csv`, `experiments/run_power_curve.py`. `entropy-2-mse`, `im_size=256`,
+`results/prior/power_curve.csv`, `experiments/prior/run_power_curve.py`. `entropy-2-mse`, `im_size=256`,
 10 independent draws per cell, **detection rate = % of repeats rejecting at α = 0.05**:
 
 | comparison | n=50 | 100 | 200 | 500 | 1000 | 2000 | 4000 | n for 80% |
@@ -233,7 +247,7 @@ measured over only 10 repeats**, which cannot resolve a 5% rate — hence §2.7.
 
 ### 2.7 The test is calibrated, and mildly conservative at small n
 
-`results/calibration.csv`, `experiments/run_calibration.py`. Both sides drawn from disjoint halves
+`results/prior/calibration.csv`, `experiments/prior/run_calibration.py`. Both sides drawn from disjoint halves
 of CIFAR-10, so the null is true by construction. 500 repeats per row:
 
 | n | false positives | rate | 95% CI | p-value uniformity |
@@ -288,6 +302,204 @@ Kolmogorov–Smirnov, Mann–Whitney U, Cramér–von Mises, Anderson–Darling.
 implemented.** The only comparison in the code is a KL point estimate. There is no null
 distribution, no p-value, no threshold, and therefore **no hypothesis test anywhere in a project
 called H-Test-IQM**. This is the single biggest gap between the draft and the code (§5.1).
+
+---
+
+## 2b. The six-experiment suite (August 2026, second pass)
+
+Everything below comes from `results/exp*.csv`, written by `experiments/exp1..exp6`. They all
+read `results/score_cache/`, so every cell is a resample of scores computed once — which is what
+makes 1000 repeats per cell affordable where the first pass could only manage 10.
+
+**These supersede §2.4 and §2.5.** §2.4's "a JPEG byte count beats the autoencoder" survives as
+a statement about *the scalar*, but §2.9.5 shows it does not survive as a statement about the
+autoencoder. §2.5's upsampling result is confirmed and given a mechanism in §2.9.3.
+
+### 2.9.1 Power (exp1) — calibrated at 1000 repeats
+
+False-positive rate on `control-disjoint`, `entropy-2-mse`, 1000 repeats per cell:
+
+| n | 25 | 50 | 100 | 200 | 500 | 1000 | 2000 | 4000 |
+|---|---|---|---|---|---|---|---|---|
+| FP | 4.1% | 4.3% | **1.9%** | 4.1% | 4.6% | 5.1% | 4.7% | 4.6% |
+
+Seven of eight sit on 5%. The n = 100 cell is conservative because the KS statistic is discrete
+at small n, so the attainable p-values straddle 0.05 rather than hitting it — expected behaviour
+of the test, consistent with §2.7, and it makes small-n power look slightly worse than a
+perfectly-calibrated test would.
+
+Smallest *tested* n reaching 80% detection (grid: 25, 50, 100, 200, 500, 1000, 2000, 4000):
+
+| comparison | entropy-2-mse | jpeg_bytes | pixel_std | pixel_entropy | BRISQUE |
+|---|---|---|---|---|---|
+| control-disjoint | >4000 | >4000 | >4000 | >4000 | >4000 |
+| cifar10-vs-cifar100 | 4000 | 4000 | 4000 | **1000** | 2000 |
+| cifar-vs-dtd | 4000 | **25** | 500 | 200 | **25** |
+| cifar-vs-imagenet64 | 500 | **25** | 500 | 2000 | **25** |
+| cifar-vs-oneclass | 200 | 100 | 100 | 100 | 200 |
+| cifar-vs-uniform | 50 | **25** | 25 | 25 | 25 |
+
+Figure: `figures/fig1_power_curve.png`.
+
+### 2.9.2 Contamination (exp2) — the stopping-criterion result
+
+CIFAR-10 with a fraction *f* of its images replaced. Smallest *f* reaching 80% power at
+n = 4000, over 500 repeats per cell:
+
+| contaminant | jpeg_bytes | entropy-2-mse |
+|---|---|---|
+| uniform noise | 5% | 10% |
+| DTD | 5% | 100% |
+| ImageNet64 | 5% | 50% |
+| CIFAR-100 | never | never |
+
+All 1081 cells have an f = 0 false-positive rate near 5%, so the sweep is calibrated throughout —
+that column is a built-in null replicated 24 times. Neither scorer detects CIFAR-100
+contamination at any fraction, which is a fair negative: those distributions really are close.
+
+This is the experiment that turns the method into the data-collection stopping criterion the
+drafts propose. Everything else compares two fixed datasets and can only answer "different:
+yes/no". Figure: `figures/fig2_contamination.png`.
+
+### 2.9.3 Resolution (exp3) — the mechanism behind §2.5
+
+KS statistic by `im_size`, 100 repeats, n = 4000. The control is flat (0.0172 → 0.0188), so the
+rise is signal, not a null that drifts:
+
+| comparison | 32px | 64px | 128px | 256px |
+|---|---|---|---|---|
+| **entropy-2-mse** | | | | |
+| cifar10-vs-cifar100 | 0.0243 | 0.0344 | 0.0406 | 0.0478 |
+| cifar-vs-dtd | 0.0305 | 0.0501 | 0.0494 | 0.0448 |
+| cifar-vs-imagenet64 | 0.0404 | 0.0389 | 0.0731 | 0.1082 |
+| cifar-vs-oneclass | 0.0186 | 0.0444 | 0.0782 | 0.1453 |
+| cifar-vs-uniform | 0.0360 | 0.0780 | 0.1949 | 0.3099 |
+| **jpeg_bytes** | | | | |
+| cifar-vs-dtd | 0.3045 | 0.6407 | 0.8500 | 0.9567 |
+| cifar-vs-imagenet64 | 0.0922 | 0.8019 | 0.6057 | 0.6678 |
+| cifar-vs-oneclass | 0.2846 | 0.2552 | 0.2536 | 0.2462 |
+| cifar-vs-uniform | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+
+**The mechanism is a binomial floor, not perception.** The autoencoder downsamples by 16, so a
+32px input produces a 2×2×64 latent — 256 bits. The score is the fraction of `+1`s among them,
+so its standard deviation cannot fall below √(0.25/256) = 0.0312. Measured per-image standard
+deviations at 32px:
+
+| dataset | 32px sd | 256px sd |
+|---|---|---|
+| CIFAR_10 | 0.0303 | 0.0125 |
+| CIFAR_100 | 0.0297 | 0.0135 |
+| IMAGENET64_VAL | 0.0294 | 0.0120 |
+| DTD | 0.0279 | 0.0131 |
+| UNIFORM | 0.0310 | 0.0032 |
+
+Every dataset sits on the floor, uniform noise included, and the statistic takes only **64
+distinct values across 60 000 images** (1518 at 256px). At 256px the latent is 16×16×64 = 16 384
+bits, the floor drops to 0.0039, and real structure appears — uniform noise collapses to 0.0032
+while natural images spread to 0.012–0.013. That dispersion gap is the entire signal, consistent
+with the score being centred on 0.5 for every dataset.
+
+So §2.5 is right that the power depends on the upsample, but the reason is not that upsampling
+adds perceptual information — it is that **the occupancy statistic needs enough latent elements
+to average over**, and 8× upsampling is how it accidentally gets them. This is a statement about
+the estimator, not about natural-image statistics, and it predicts the effect should be absent
+for any scorer whose output is not a proportion over code elements. `jpeg_bytes` confirms that
+prediction: its one-class detection is *flat* in resolution (0.2846 → 0.2462).
+
+**Two consequences for the headline table.**
+
+1. `cifar-vs-oneclass` is the only comparison with no resampling asymmetry at all — both sides
+   are CIFAR-10 at the same resolution. At native 32px the autoencoder scores **0.0186 against a
+   control of 0.0172**, i.e. nothing, while `jpeg_bytes` scores 0.2846.
+2. `cifar-vs-imagenet64` is substantially a **resampling artifact**. At 32px (CIFAR native,
+   ImageNet downsampled) `jpeg_bytes` finds them nearly indistinguishable at 0.0922; at 64px
+   (CIFAR upsampled 2×, ImageNet native) it jumps to 0.8019. A 9× jump from changing only the
+   resampling. Only the 32px row of that comparison is trustworthy.
+
+Figures: `figures/fig5_resolution.png`, `figures/fig4_scorer_comparison.png`.
+
+### 2.9.4 Class count (exp4) — the weakest case for the method
+
+The test sample keeps *k* of 10 CIFAR-10 classes; *k* = 10 is the control. n = 2000, 500 draws
+per *k* (repeats are scaled up as C(10,k) shrinks, so every *k* is estimated to the same
+precision — without that, *k* = 10 rests on a single subset).
+
+Detection at **k = 9** — dropping exactly one class of ten:
+
+| scorer | k = 9 | k = 10 (control) |
+|---|---|---|
+| jpeg_bytes | 31.4% | 3.0% |
+| BRISQUE | 31.4% | 4.4% |
+| pixel_entropy | 29.0% | 4.4% |
+| pixel_std | 21.6% | 3.8% |
+| **entropy-2-mse** | **8.8%** | 6.0% |
+
+The autoencoder is barely above its own false-positive rate. This is exactly the "check that a
+newly added class actually adds density" use case from §1, and on it the perceptual scorer is
+close to useless while a JPEG byte count works.
+
+Also: between-subset sd at *k* = 1 is 0.0394 against a mean KS of 0.0798. **Which** classes are
+kept matters about as much as how many — any single-subset result at small *k* is not reportable.
+
+### 2.9.5 Multivariate (exp5) — this reverses §2.4
+
+The project's statistic averages a 64×16×16 quantised latent into one number. Keeping one
+`+1`-ratio per latent *channel* (64-D, the already-implemented `spacial=True` path) and testing
+in R^64 with a classifier two-sample test, at n = 1000, 200 repeats:
+
+| comparison | AE 64-D / C2ST | AE scalar / KS | jpeg scalar / KS |
+|---|---|---|---|
+| control-disjoint | 4.5% | 5.0% | 5.0% |
+| **cifar10-vs-cifar100** | **88.0%** | 41.5% | **19.0%** |
+| cifar-vs-dtd | 100% | 30.0% | 100% |
+| cifar-vs-imagenet64 | 100% | 100% | 100% |
+| cifar-vs-oneclass | 100% | 100% | 100% |
+| cifar-vs-uniform | 100% | 100% | 100% |
+
+Energy distance and MMD on the same 64-D vectors also reach 100% on every real comparison
+(`results/exp5_multivariate_perm.csv`).
+
+**The scalar was the bottleneck, not the autoencoder.** The same forward pass, at the same n,
+goes from 41.5% to 100% on ImageNet64 and 30% to 100% on DTD purely by not averaging the code
+away. And on `cifar10-vs-cifar100` — the hardest comparison, the only one free of resampling
+confounds, and the one that most resembles the intended use case — the 64-D code reaches 88%
+where a JPEG byte count manages 19%.
+
+So §2.4's finding is real but narrower than it was stated: **a JPEG byte count beats the
+autoencoder's scalar, not the autoencoder.** The perceptual scorer wins where the task is
+genuinely perceptual, once it is allowed to keep its representation.
+
+Caveat: the energy/MMD control ran only 20 repeats (2/20 rejections). That is consistent with 5%
+but does not demonstrate it — the Wilson interval spans roughly [3%, 30%]. The C2ST arms carry
+the calibration evidence at 200 repeats. C2ST here uses a single held-out split, **not**
+cross-validation: out-of-fold predictions are not independent given the fitted model, and the
+cross-validated version measured a 9% false-positive rate at a nominal 5%. The held-out version
+measures 5.7% on 300 null draws.
+
+Figure: `figures/fig7_multivariate.png`.
+
+### 2.9.6 Checkpoints (exp6) — the premise does not survive
+
+All six usable checkpoints, `{mse, ssim, nlpd} × {natural, uniform-noise}`, n = 4000, 100
+repeats. Mean KS across the five real comparisons:
+
+| checkpoint | trained on natural | trained on uniform noise | recovery |
+|---|---|---|---|
+| entropy-2-mse | 0.1310 | 0.1521 | 116% |
+| entropy-2-nlpd | 0.1794 | 0.1718 | 96% |
+| entropy-2-ssim | 0.1999 | 0.1870 | 94% |
+| **overall** | **0.1701** | **0.1703** | **100.1%** |
+
+**Autoencoders trained on uniform noise discriminate these datasets exactly as well as ones
+trained on natural images.** The premise in §1 — "an AE trained to reconstruct natural images has
+absorbed natural-image statistics, so the code-occupancy statistic is perceptually meaningful" —
+is not supported. Whatever the statistic measures, it is a property of the architecture and the
+quantiser. The sibling `percept_reduce` project found ~91% recovery on a downstream probe (§7);
+here it is 100%.
+
+Second, more immediately actionable: **`mse-2`, the checkpoint used for every result in this
+project, is the worst of the three natural-trained ones** (0.1310 against ssim's 0.1999, better
+on four of five comparisons). That choice was never tested until now.
 
 ---
 
@@ -495,42 +707,56 @@ datasets the first time someone constructs a loader directly.
   `dataset_proportion` semantics all fixed.
 - ✅ **Results persist to `results/*.csv`** instead of living in notebook output cells.
 
-### 5.1 Tier 1 — what the August results now force
+Then, in the second pass (§2b):
 
-1. **Decide what the paper claims, because "perceptual metrics are the right space" is no longer
-   supported.** §2.4 shows a JPEG byte count beating the autoencoder on every comparison at every
-   resolution. Two honest options:
-   - **Reframe around the pipeline.** The contribution becomes the *procedure* — reduce images to
-     a scalar with any scorer, run a calibrated two-sample test, report a p-value and the sample
-     size needed. The scorer is a pluggable component, and the paper reports that a trivial one
-     wins. This is defensible, and the baseline table becomes a feature rather than a threat.
-   - **Rescue the perceptual scorer** by not throwing away the code (§5.2.6). The current
-     statistic compresses 16 384 quantised codes to one scalar; a multivariate comparison is the
-     obvious next move and is where the AE could plausibly beat a byte count.
-   Either way the baseline table has to be *in* the paper.
-2. **Justify or drop `im_size=256`.** §2.5 shows the method's power depends on an undocumented
-   8× upsample and largely evaporates at native resolution. If 256 is kept it needs an argument;
-   if not, the headline results weaken substantially.
-3. **Report the conservatism.** Calibration is measured (§2.7): the false-positive rate is fine
-   at 3.6% [2.1%, 5.6%], but the null p-values are non-uniform because the score is discrete, so
-   the tests are conservative. Say so, and use permutation p-values for marginal cells.
-4. **Match native resolution in every comparison, or report both.** CIFAR-vs-DTD and
-   CIFAR-vs-ImageNet at `im_size=256` are substantially resolution comparisons for *any* scorer;
-   the honest version either downsamples everything to 32 or reports both and says which is which.
+- ✅ **Score cache built** — every dataset scored once per (scorer, resolution), so experiments
+  resample cached arrays and never touch an image. This is what made 1000 repeats per cell
+  affordable; the first pass managed 10.
+- ✅ **Six experiments run** — power, contamination, resolution, class count, multivariate,
+  checkpoints (`experiments/exp1..exp6`, `results/exp*.csv`).
+- ✅ **Seven figures regenerable** from the CSVs via `experiments/make_figures.py`.
+- ✅ **Multivariate tests implemented** — energy distance, MMD, C2ST in
+  `h_test_IQM/pipeline/multivariate.py`, all checked against a true null.
+
+### 5.1 Tier 1 — what the results now force
+
+The §2b suite answered questions 1 and 6 of the previous list. What it forces instead:
+
+1. **Rebuild the paper around the multivariate result (§2.9.5).** This is now the strongest
+   claim available and the only place the perceptual scorer beats the trivial baselines: 88% vs
+   19% on CIFAR-10 vs CIFAR-100, the hardest and cleanest comparison. The scalar occupancy
+   statistic should be presented as *the thing that was wrong*, with the JPEG baseline as the
+   evidence — §2.4 becomes a motivating negative result rather than a threat.
+2. **Drop or rewrite the natural-image-statistics premise (§2.9.6).** Noise-trained encoders
+   match natural-trained ones at 100.1%. The premise as stated in §1 cannot appear in the paper.
+   Either drop the perceptual justification and present the AE as a generic learned featuriser,
+   or investigate *why* the architecture alone suffices — the latter is a more interesting paper
+   and connects directly to `percept_reduce` (§7).
+3. **Switch checkpoint, or explain the choice.** `mse-2` is the worst of the three natural-trained
+   checkpoints; `ssim-2` scores 0.1999 against its 0.1310 (§2.9.6). Every result in the project
+   uses `mse-2` by inheritance, not by test. Re-run §2b's headline cells on `ssim-2`.
+4. **Retire or heavily caveat `cifar-vs-imagenet64` (§2.9.3).** It is substantially a resampling
+   artifact — a 9× swing in the JPEG KS from changing only which side gets upsampled. Report the
+   32px row or drop the comparison.
+5. **Report `im_size` as an estimator parameter, not a preprocessing detail (§2.9.3).** The
+   binomial-floor argument means the right framing is "the occupancy statistic needs ≥ N latent
+   elements", which is a property of the method that can be stated and defended, unlike an
+   unexplained 8× upsample. It also predicts the effect vanishes for non-proportion scorers,
+   which `jpeg_bytes` confirms.
+6. **Report the conservatism.** The false-positive rate is fine (4.1–5.1% across the n grid,
+   §2.9.1), but the KS statistic is discrete, so the n = 100 cell sits at 1.9%. Say so, and use
+   permutation p-values for marginal cells.
 
 ### 5.2 Tier 2 — cheap and likely to strengthen the result
 
-6. **Stop throwing away the code.** The current statistic compresses a 64×16×16 quantised code to
-   one scalar. Try (a) per-channel `+1`-ratios → a 64-D vector, compared with MMD, energy
-   distance, or a classifier two-sample test (C2ST); (b) `spacial=True`, already implemented in
-   `entropy_AE.py` and never used; (c) `centers=5` — note §3.10 fires here and
-   `counts_per_emb_feature_flat` has a bare `# TODO: center 5` that returns raw embeddings.
-   A C2ST also gives a p-value and an interpretable effect size (accuracy above 0.5) for free.
-7. **Sensitivity to the scorer.** Rerun §2.2 across the other 14 checkpoints — especially the
-   uniform-trained ones. If `nlpd-2-u` (trained on *noise*, with a perceptual loss) works as well
-   as `mse-2` trained on natural images, that is a much more interesting paper than the current
-   one, and the sibling project `~/projects/percept_reduce` found exactly that pattern
-   (uniform-noise-trained encoders recovering ~91% of MSE performance on a downstream probe).
+6. ✅ **Done — stop throwing away the code** (§2.9.5). Per-channel `+1`-ratios → 64-D, compared
+   with C2ST, energy distance and MMD. This is now the project's best result. Still untried:
+   `centers=5` — §3.10 fires here and `counts_per_emb_feature_flat` has a bare `# TODO: center 5`
+   that returns raw embeddings. And the full `spacial` grid (64×16×16) rather than per-channel
+   means, which discards spatial layout.
+7. ✅ **Done — sensitivity to the checkpoint** (§2.9.6). Answer: the objective barely matters and
+   the training *data* does not matter at all. The remaining 9 checkpoints are excluded for
+   stated reasons (`centers=5` is unimplemented, `mae` weights do not work).
 8. **A dataset × dataset KL/p-value matrix.** Wire up CIFAR-100 and DTD (§3.9) and produce one
    heatmap over {CIFAR-10, CIFAR-100, Caltech-101, Caltech-256, DTD, ImageNet64, MNIST, uniform}.
    Single figure, carries the whole "measure how close two datasets are" claim, and the loaders

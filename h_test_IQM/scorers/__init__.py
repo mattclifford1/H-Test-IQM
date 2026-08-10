@@ -9,16 +9,21 @@ class init_entropy_encoder():
                  metric='mse',
                  dist='natural',
                  centers=2,
+                 spacial=False,
                  ):
         self.metric = metric
         self.dist = dist
         self.centers = centers
+        # spacial=True keeps one +1-ratio per latent channel -> a 64-D score per image
+        # instead of a scalar. Only the multivariate experiment uses it.
+        self.spacial = spacial
 
     def __call__(self, im_size, device):
         return entropy_encoder_model(metric=self.metric,
                                dist=self.dist,
                                centers=self.centers,
-                               im_size=im_size, 
+                               spacial=self.spacial,
+                               im_size=im_size,
                                device=device)
     
 
@@ -40,7 +45,12 @@ SCORERS = {
     'entropy-2-ssim': init_entropy_encoder(metric='ssim', dist='natural', centers=2),
     'entropy-2-nlpd': init_entropy_encoder(metric='nlpd', dist='natural', centers=2),
     'entropy-2-mse-u': init_entropy_encoder(metric='mse', dist='uniform', centers=2),
+    'entropy-2-ssim-u': init_entropy_encoder(metric='ssim', dist='uniform', centers=2),
     'entropy-2-nlpd-u': init_entropy_encoder(metric='nlpd', dist='uniform', centers=2),
+    # multivariate variant: a 64-vector of per-channel +1 ratios rather than one scalar.
+    # Needs a multivariate two-sample test -- see pipeline/multivariate.py.
+    'entropy-2-mse-64d': init_entropy_encoder(metric='mse', dist='natural', centers=2,
+                                              spacial=True),
     # baselines / controls -- see baseline_scorers.py
     'BRISQUE': init_numpy_scorer(brisque_model),
     'pixel_std': init_numpy_scorer(pixel_std_model),

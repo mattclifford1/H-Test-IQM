@@ -26,7 +26,7 @@ import numpy as np
 import pandas as pd
 
 from h_test_IQM.pipeline import get_scores
-from experiments.run_density_grid import COMPARISONS, pool_size, RESULTS_DIR
+from experiments.prior.run_density_grid import COMPARISONS, pool_size, RESULTS_DIR
 
 SAMPLE_SIZES = [50, 100, 200, 500, 1000, 2000, 4000]
 ALPHA = 0.05

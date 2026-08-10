@@ -27,8 +27,11 @@ from h_test_IQM.pipeline import get_scores
 from h_test_IQM.datasets import TOTAL_INSTANCES
 from h_test_IQM.datasets.torch_loaders import get_classes
 
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.dirname(
-    os.path.abspath(__file__))), 'results')
+from experiments.common import RESULTS_DIR as _ROOT_RESULTS
+
+# these scripts predate the score cache; their output is the record of the first pass and
+# lives under results/prior/ so it cannot be confused with the current numbers
+RESULTS_DIR = os.path.join(_ROOT_RESULTS, 'prior')
 
 
 # each entry is (name, target spec, test spec, what we expect)

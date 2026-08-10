@@ -100,22 +100,45 @@ To repeat a configuration over many seeds, use
 
 ### The full experiments
 
+Build the score cache once, then everything else is cheap:
+
 ```bash
-python -m experiments.run_density_grid --n 4000 --permutations 1000   # main table
-python -m experiments.run_resolution_sweep --n 4000                   # im_size control
-python -m experiments.run_power_curve --repeats 10                    # detection vs sample size
-python -m experiments.run_calibration --repeats 500                   # false-positive rate
+python -m experiments.score_cache             # ~1-2 h, once. All the rest depend on it.
+
+python -m experiments.exp1_power_curve        # how many images to detect each shift
+python -m experiments.exp2_contamination      # detection vs contamination fraction
+python -m experiments.exp3_resolution         # main table at 32/64/128/256 px
+python -m experiments.exp4_class_count        # keep k of 10 classes, k = 1..10
+python -m experiments.exp5_multivariate       # 64-D latent code vs the scalar
+python -m experiments.exp6_checkpoints        # all six usable AE checkpoints
+
+python -m experiments.summarise               # the tables
+python -m experiments.make_figures            # figures/fig*.png and .pdf
 ```
 
+Results are in [FINDINGS.md](FINDINGS.md) §2b. Three that change how you should read the rest of
+this repo:
+
+- the autoencoder's **scalar** loses to a JPEG byte count, but its **64-D code** beats it 88% to
+  19% on the hardest comparison — the averaging is the problem, not the scorer;
+- the autoencoder's dependence on `im_size` is a **binomial floor**, not perception: at 32px its
+  latent is 256 bits, so the occupancy score cannot have an sd below 0.031, and every dataset
+  sits on that floor;
+- checkpoints trained on **uniform noise** discriminate as well as ones trained on natural
+  images (100.1%), so the "it learned natural-image statistics" premise is unsupported.
+
 Each writes a CSV to [`results/`](results/README.md) incrementally, so a crash costs only the
-current row. Add `--quick` to `run_density_grid` for a smoke test.
+current row. See [`experiments/README.md`](experiments/README.md) for what each one is for and
+why the cache changes what is affordable.
 
 ### Two things that will bite you
 
-- **`dataset_proportion` is not the fraction of the dataset.** An unused `[0.4, 0.3, 0.3]` split
-  is applied first, so `dataset_proportion=1` gives 40% of the data and `=0.2` gives 8%.
 - **Target and test share a seed by default**, which means *identical* images, not two
-  subsamples. Pass `shift_seed_test=1` for a disjoint draw.
+  subsamples. Pass `shift_seed_test=1` for a disjoint draw — or better, use
+  `partition_target='a'` / `partition_test='b'`, which are disjoint by construction.
+- **Everything is resized to 256×256 before scoring**, so CIFAR is upsampled 8×. That is a real
+  confound, not a detail: the autoencoder's discriminative power rises with `im_size` while the
+  control stays flat (FINDINGS.md §2.5). Pass `im_size=(32, 32)` for native resolution.
 
 Both, and the rest, are in [CLAUDE.md](CLAUDE.md#key-facts-these-are-load-bearing).
 

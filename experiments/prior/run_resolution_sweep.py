@@ -21,7 +21,7 @@ import argparse
 import pandas as pd
 
 from h_test_IQM.pipeline import get_scores
-from experiments.run_density_grid import COMPARISONS, proportion_for, RESULTS_DIR
+from experiments.prior.run_density_grid import COMPARISONS, proportion_for, RESULTS_DIR
 
 # 32 is CIFAR's native size; 256 is what every published number in this repo used.
 # The autoencoder is fully convolutional so it accepts all of these, but its latent grid
