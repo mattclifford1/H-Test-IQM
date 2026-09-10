@@ -3,12 +3,12 @@
 Every number in `results/` and every figure in `figures/` is produced by a script in here.
 Nothing is computed in a notebook any more.
 
-Run everything as a module from the repo root, with the `h_data` env active:
+Run everything as a module from the repo root, through `uv run` (see the top-level `README.md`
+for setup — `uv sync` once):
 
 ```bash
-conda activate h_data
-python -m experiments.score_cache        # do this first -- everything else depends on it
-python -m experiments.exp1_power_curve
+uv run python -m experiments.score_cache        # do this first -- everything else depends on it
+uv run python -m experiments.exp1_power_curve
 ```
 
 ---

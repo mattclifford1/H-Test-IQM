@@ -1,0 +1,53 @@
+# author: Matt Clifford <matt.clifford@bristol.ac.uk>
+[project]
+name = "h_test_IQM"
+version = "0.1"
+description = "use IQMs to assess dataset quality."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+authors = [{ name = "Matt Clifford", email = "matt.clifford@bristol.ac.uk" }]
+
+# Pinned to the versions the results in results/ and FINDINGS.md were produced
+# with. Loosen deliberately, not by accident.
+dependencies = [
+    "brisque==0.0.16",
+    "DISTS-pytorch==0.1",
+    "gdown==5.2.0",
+    "lpips==0.1.4",
+    "matplotlib==3.9.1.post1",
+    "notebook==7.2.1",
+    "numpy==2.0.1",
+    "opencv-python==4.10.0.84",
+    "pandas==2.2.2",
+    "Pillow==10.4.0",
+    "pytorch-ignite==0.5.1",
+    "scikit-learn==1.5.1",
+    "scipy==1.14.0",
+    "torch==2.4.0",
+    "torchaudio==2.4.0",
+    "torchmetrics==1.4.1",
+    "torchvision==0.19.0",
+    "tqdm==4.66.5",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# experiments/ is deliberately not installed — it is run from the repo root as
+# `python -m experiments.<name>`.
+packages = ["h_test_IQM"]
+
+# torch is taken from the CUDA 12.1 wheel index, not PyPI, so `uv sync` gets a
+# GPU build (2.4.0+cu121) on this machine. The index only carries linux/windows
+# wheels; on macOS drop these two blocks and take the CPU build from PyPI.
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+torchaudio = { index = "pytorch-cu121" }

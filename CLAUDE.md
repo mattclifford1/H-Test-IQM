@@ -142,13 +142,27 @@ brainstorm.
 
 ## Environment
 
+**uv, not conda.** `pyproject.toml` + `uv.lock` are the definition of the env; `setup.py` and
+`requirements.txt` were deleted on 2026-08-10.
+
 ```bash
-conda activate h_data          # the env with the editable install (torch 2.4.0+cu121, numpy 2.0.1)
+uv sync                        # builds .venv/ from uv.lock -- python 3.12, torch 2.4.0+cu121, numpy 2.0.1
+uv run python -m experiments.score_cache
+uv run python -c "from h_test_IQM.pipeline import get_scores; ..."
 ```
 
-`h_data` is the working env — `~/anaconda3/envs/h_data/bin/python` already has `h_test_IQM`
-installed editable against this directory. `h_dev` is an older equivalent. There is no `h_test`
-env despite what `README.md` used to imply. Setup from scratch is in `README.md`.
+Prefix commands with `uv run` rather than activating anything; `uv run` syncs the env first, so it
+also picks up a changed `pyproject.toml`. `.venv/` is gitignored, `uv.lock` is committed — use
+`uv sync --frozen` when you want exactly the locked versions and no re-resolution.
+
+Dependency versions are **pinned** in `pyproject.toml` to what produced `results/` and
+`FINDINGS.md`. Bumping one is a decision, not housekeeping. torch/torchvision/torchaudio come
+from the `cu121` wheel index declared there, not PyPI — that is what makes `uv sync` give a GPU
+build. Setup from scratch is in `README.md`.
+
+The old conda envs (`h_data`, `h_dev`) still exist on this machine and still work, but are no
+longer the supported path — prefer `.venv`. Anything quoting `~/anaconda3/envs/h_data/bin/python`
+(e.g. `FINDINGS.md` §0) is describing how a number was originally computed, not how to run today.
 
 Datasets self-download on first use into `h_test_IQM/datasets/<NAME>/raw_data/` (gitignored).
 **ImageNet64 does not** — it is expected pre-extracted at `~/datasets/ImageNet64/{train,val}/`

@@ -33,27 +33,40 @@ Paper drafts are in `~/Repos/Overleaf/percept-reduce/` — three separate Overle
 
 ## Setting up
 
+The project uses [uv](https://docs.astral.sh/uv/). Install it if you have not
+(`curl -LsSf https://astral.sh/uv/install.sh | sh`), then:
+
 ```bash
 git clone https://github.com/mattclifford1/H-Test-IQM
 cd H-Test-IQM
-conda create -n h_data python=3.10 -y
-conda activate h_data
+uv sync
 ```
 
-Install PyTorch for GPU if required, e.g.
+That is the whole setup. `uv sync` builds `.venv/` from `uv.lock` — Python 3.12, the pinned
+dependencies, a CUDA 12.1 PyTorch build, and `h_test_IQM` itself installed editable. No conda,
+no separate PyTorch install step.
+
+Run things through `uv run`, which activates the env for you:
 
 ```bash
-conda install pytorch==2.4.0 torchvision==0.19.0 torchaudio==2.4.0 pytorch-cuda=11.8 -c pytorch -c nvidia
+uv run python -m experiments.exp1_power_curve --repeats 10
+uv run jupyter notebook
 ```
 
-Then install as an editable package:
+or activate it the usual way if you prefer: `source .venv/bin/activate`.
 
-```bash
-pip install -e .
-```
+> **GPU:** `pyproject.toml` pulls torch/torchvision/torchaudio from the `cu121` wheel index, which
+> only carries linux and windows wheels. On macOS, or for a CPU-only box, delete the
+> `[[tool.uv.index]]` and `[tool.uv.sources]` blocks and re-run `uv lock && uv sync` to take the
+> default builds from PyPI.
 
-> **Existing machine:** the env is already built as **`h_data`** — just `conda activate h_data`.
-> (`h_dev` is an older equivalent. There is no `h_test` env.)
+> **Versions are pinned** in `pyproject.toml` to what `results/` and `FINDINGS.md` were produced
+> with. Change them deliberately. `uv.lock` is committed and is the reproducible record; use
+> `uv sync --frozen` to install exactly it.
+
+> **Migrating from conda:** the old `h_data` env still exists and still works, but `setup.py` and
+> `requirements.txt` are gone — `pyproject.toml` replaces both. `h_data` is no longer the
+> supported path; use `.venv`.
 
 ### Data
 
