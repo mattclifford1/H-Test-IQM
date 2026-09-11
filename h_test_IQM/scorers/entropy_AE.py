@@ -10,19 +10,34 @@ from h_test_IQM.scorers.torch_scorers import base_scorer_torch
 
 
 class entropy_encoder_model(base_scorer_torch):
-    def setup(self, metric='mse', dist='natural', centers=2, spacial=False):
+    def setup(self, metric='mse', dist='natural', centers=2, spacial=False, seed=0):
        # checks
         if metric not in ['mse', 'ssim', 'nlpd']:
             raise ValueError(
                 'Invalid metric, needs to be one of: mse, ssim, nlpd')
-        if dist not in ['natural', 'uniform']:
+        if dist not in ['natural', 'uniform', 'random']:
             raise ValueError(
-                'Invalid training distribution, needs to be one of: natural, uniform')
+                'Invalid training distribution, needs to be one of: natural, uniform, random')
         if centers not in [2, 5]:
             raise ValueError(
                 'Invalid number of centers, needs to be one of: 2, 5')
         self.centers = centers
         self.spacial = spacial
+
+        if dist == 'random':
+            # the untrained control: same architecture, no checkpoint. The encoder ends in a
+            # plain conv and quantises to the nearer fixed centre, so the code is the sign
+            # pattern of a random convolutional projection -- "architecture + quantiser, no
+            # learning". Built under a forked RNG so the seed fixes the weights without
+            # disturbing anyone else's torch random state. `metric` is meaningless here.
+            with torch.random.fork_rng(devices=[]):
+                torch.manual_seed(seed)
+                self.model = EntropyLimitedModel(
+                    N=128, M=64, sigmoid=True, centers=self.centers)
+            self.model.eval()
+            self.model.to(self.device)
+            return
+
         self.model = EntropyLimitedModel(
             N=128, M=64, sigmoid=True, centers=self.centers)
 

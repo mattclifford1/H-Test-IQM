@@ -10,19 +10,23 @@ class init_entropy_encoder():
                  dist='natural',
                  centers=2,
                  spacial=False,
+                 seed=0,
                  ):
         self.metric = metric
         self.dist = dist
         self.centers = centers
         # spacial=True keeps one +1-ratio per latent channel -> a 64-D score per image
-        # instead of a scalar. Only the multivariate experiment uses it.
+        # instead of a scalar. Only the multivariate experiments use it.
         self.spacial = spacial
+        # only read for dist='random', where it fixes the untrained weights
+        self.seed = seed
 
     def __call__(self, im_size, device):
         return entropy_encoder_model(metric=self.metric,
                                dist=self.dist,
                                centers=self.centers,
                                spacial=self.spacial,
+                               seed=self.seed,
                                im_size=im_size,
                                device=device)
     
@@ -51,6 +55,24 @@ SCORERS = {
     # Needs a multivariate two-sample test -- see pipeline/multivariate.py.
     'entropy-2-mse-64d': init_entropy_encoder(metric='mse', dist='natural', centers=2,
                                               spacial=True),
+    # exp7: the 64-D code for every usable checkpoint, plus the same architecture UNTRAINED
+    # at three seeds -- the null for "does the code's structure come from natural images?"
+    'entropy-2-ssim-64d': init_entropy_encoder(metric='ssim', dist='natural', centers=2,
+                                               spacial=True),
+    'entropy-2-nlpd-64d': init_entropy_encoder(metric='nlpd', dist='natural', centers=2,
+                                               spacial=True),
+    'entropy-2-mse-u-64d': init_entropy_encoder(metric='mse', dist='uniform', centers=2,
+                                                spacial=True),
+    'entropy-2-ssim-u-64d': init_entropy_encoder(metric='ssim', dist='uniform', centers=2,
+                                                 spacial=True),
+    'entropy-2-nlpd-u-64d': init_entropy_encoder(metric='nlpd', dist='uniform', centers=2,
+                                                 spacial=True),
+    'entropy-2-random-s0-64d': init_entropy_encoder(dist='random', centers=2,
+                                                    spacial=True, seed=0),
+    'entropy-2-random-s1-64d': init_entropy_encoder(dist='random', centers=2,
+                                                    spacial=True, seed=1),
+    'entropy-2-random-s2-64d': init_entropy_encoder(dist='random', centers=2,
+                                                    spacial=True, seed=2),
     # baselines / controls -- see baseline_scorers.py
     'BRISQUE': init_numpy_scorer(brisque_model),
     'pixel_std': init_numpy_scorer(pixel_std_model),
