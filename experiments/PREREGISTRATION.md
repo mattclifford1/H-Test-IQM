@@ -158,3 +158,100 @@ what was registered:
   exclusions above were conservative, and the scorers are calibrated.
 - The class drop inherits the same problem, so it was re-run with redrawn partitions and its
   own k = 10 null. Natural mse 64-D: 17.0% vs scalar 9.0% — P4's reading is unchanged.
+
+---
+
+# exp8 — a featuriser ladder: what is the untrained encoder detecting?
+
+Registered **2026-09-11**, before `experiments/exp8_featuriser_ladder.py` or any of its
+scorers or caches exist. exp7's outcome is above.
+
+## Why this experiment
+
+exp7 found an untrained, randomly initialised autoencoder encoder is the best detector of
+CIFAR-10 vs CIFAR-100 — better than the same architecture trained on natural images or on noise.
+That can mean three quite different things, and this experiment separates them:
+
+1. **The difference is low-level** (colour, contrast), and any featuriser that keeps low-level
+   statistics does as well. Then the contribution is the two-sample test, not the featuriser.
+2. **Reconstruction training specifically discards information** a two-sample test needs, but
+   learned representations in general do not. Then ImageNet-pretrained features beat the
+   untrained encoder, and the untrained encoder is a cheap baseline rather than a finding.
+3. **Untrained convolutional features really are competitive** with learned ones for this job.
+   That would be the finding worth building a paper on.
+
+## Design
+
+Every featuriser goes through the same pipeline: features → held-out logistic C2ST (the exp5/exp7
+protocol, no tuning), and every null uses a **partition redrawn on every repeat** (FINDINGS.md
+§2.9.8 — the fixed-split control is retired from here on).
+
+**The ladder, ordered by how much each featuriser knows about images:**
+
+| rung | featuriser | dim | input | seeds |
+|---|---|---|---|---|
+| 1 | per-channel colour moments (RGB mean and std) | 6 | 32 px native | — |
+| 2 | random Gaussian projection of raw pixels — no convolution | 64 | 32 px native | 0, 1, 2 |
+| 3 | untrained AE encoder, per-channel occupancy (exp7's winner) | 64 | 256 px | 0, 1, 2 |
+| 3q | the same encoder, per-channel mean **pre-quantisation** activation | 64 | 256 px | 0, 1, 2 |
+| 4 | natural-trained AE encoder `mse-2`, occupancy (exp7's best trained) | 64 | 256 px | — |
+| 4q | the same, pre-quantisation activation | 64 | 256 px | — |
+| 5 | **untrained** ResNet-18, global-average-pooled features | 512 | 224 px | 0, 1, 2 |
+| 6 | **ImageNet-pretrained** ResNet-18, same layer | 512 | 224 px | — |
+
+Both ResNets are also scored at **64-D**, by taking a seeded random subset of 64 of their 512
+channels (three subsets), so every comparison with the 64-D rungs can be made at matched
+dimension. No subset is fitted to data.
+
+Reference: `jpeg_bytes` scalar KS, as in exp7. CIFAR-10 and CIFAR-100 are both natively 32 px,
+so every resampling here is applied symmetrically to both sides.
+
+**Comparisons:**
+
+| comparison | protocol |
+|---|---|
+| null: CIFAR-10 vs CIFAR-10, redrawn partition | n = 1000, 1000 repeats, every featuriser |
+| **primary**: CIFAR-10 vs CIFAR-100 | n ∈ {100, 250, 500, 1000}, 200 repeats |
+| k = 9 class drop, redrawn partition, with its k = 10 null | n = 2000, 500 draws over the 10 dropped classes |
+
+## Predictions
+
+On the primary comparison at **n = 500** unless stated (n = 1000 saturated exp7's winner). A
+multi-seed rung's rate is its seed mean. "Ahead" means ahead by more than **10 percentage
+points** *and* in every seed or subset of the rung that has them.
+
+**P1 — ImageNet features beat the untrained encoder.** Rung 6 ahead of rung 3, both at full
+dimension and at matched 64-D.
+
+**P2 — the untrained encoder is not just reading colour.** Rung 3 ahead of rung 1.
+
+**P3 — convolution matters.** Rung 3 ahead of rung 2.
+
+**P4 — exp7's "untrained beats trained" does not generalise to ImageNet pretraining.** Rung 6
+ahead of rung 5. (If it fails, the exp7 result is about training in general, not about the
+reconstruction objective.)
+
+**P5 — a semantic change needs semantic features.** At the k = 9 class drop, rung 6 is the
+first featuriser to beat JPEG bytes (32.2% in exp7's diagnostics): its Wilson interval lies
+entirely above JPEG's.
+
+**Q — the quantiser: no prediction.** Rungs 3 vs 3q and 4 vs 4q say whether sign quantisation
+helps or costs power. I do not know which.
+
+**P6 — calibration.** Every featuriser's redrawn null has a Wilson 95% interval containing 5%.
+A featuriser that fails is excluded from interpretation and reported as such.
+
+## Check before any result is read
+
+**Pipeline identity, again.** Rung 3's cached occupancy for seed 0 must equal exp7's
+`entropy-2-random-s0-64d` cache exactly — the new scorer code must not have changed the old
+one.
+
+## How the outcome will be read
+
+| outcome on the primary comparison | reading |
+|---|---|
+| rung 1 within 10 pts of rung 3 | the CIFAR-10/100 difference is low-level; exp7's result is about colour statistics, and the contribution is the test, not the featuriser |
+| rung 6 ahead of rung 3, and rung 6 ahead of rung 5 | reconstruction training is what hurts, not learning; the untrained encoder is a cheap baseline; the method's best configuration is pretrained features, and the framing becomes representation choice rather than perception |
+| rung 3 within 10 pts of, or ahead of, rung 6 | untrained convolutional features are competitive with ImageNet features for dataset-shift detection — the finding to build on |
+| anything else | reported as found |
