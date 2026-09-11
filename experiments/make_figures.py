@@ -538,8 +538,9 @@ def fig9_featuriser_ladder():
         return
     names = d.drop_duplicates('rung').set_index('rung').rung_name
 
-    fig = plt.figure(figsize=(8.6, 7.2))
-    gs = fig.add_gridspec(2, 2, height_ratios=[1.15, 1])
+    # narrow enough that 8pt text survives being scaled to a single column
+    fig = plt.figure(figsize=(7.2, 8.6))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.35, 1])
     ax = fig.add_subplot(gs[0, :])
 
     # (a) power curves
@@ -570,8 +571,8 @@ def fig9_featuriser_ladder():
     ax.set_title('(a) CIFAR-10 vs CIFAR-100: the featuriser ladder, 200 repeats per cell',
                  fontsize=9)
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles[::-1], labels[::-1], loc='center left', bbox_to_anchor=(1.01, 0.5),
-              fontsize=7.5, handlelength=2.6)
+    ax.legend(handles[::-1], labels[::-1], loc='upper center', bbox_to_anchor=(0.5, -0.16),
+              ncol=2, fontsize=8, handlelength=2.6, columnspacing=1.2)
 
     # (b) class drop
     cd = d[(d.part == 'classdrop')]
