@@ -255,3 +255,25 @@ one.
 | rung 6 ahead of rung 3, and rung 6 ahead of rung 5 | reconstruction training is what hurts, not learning; the untrained encoder is a cheap baseline; the method's best configuration is pretrained features, and the framing becomes representation choice rather than perception |
 | rung 3 within 10 pts of, or ahead of, rung 6 | untrained convolutional features are competitive with ImageNet features for dataset-shift detection — the finding to build on |
 | anything else | reported as found |
+
+---
+
+## exp8 outcome (added 2026-09-11, after running — the exp8 registration above is unedited)
+
+Full numbers: `python -m experiments.summarise --only exp8`; `FINDINGS.md` §2.9.9.
+
+| | outcome |
+|---|---|
+| Check — pipeline identity | **failed as first run, passed under matched conditions.** Re-scoring 256 cached rows at batch 64 flipped one code element in some images (max 1/256). At batch 32 — the batch the cache was built with — 0 of 65 536 cells differ. The code is unchanged; cuDNN picks different algorithms by batch size, and 0.017% of activations sit within 1e-5 of the quantiser boundary. Batch size is now documented as part of a cached code's definition |
+| **P6** calibration | **confirmed**: 23 of 23 redrawn nulls contain 5% (4.0–6.3%; JPEG closest, [0.0495, 0.0798]) |
+| **P1** ImageNet beats untrained AE | **confirmed**: 100% vs 80.7% at n = 500, every member; also at matched 64-D. Larger at small n: 88.5% vs 16.0% at n = 100 |
+| **P2** not just colour | **confirmed**: 80.7% vs 29.0% |
+| **P3** convolution matters | **confirmed**: 80.7% vs 21.7% |
+| **P4** ImageNet beats untrained ResNet | **confirmed**: 100% vs 76.0% (512-D), 100% vs 84.2% (64-D) |
+| **P5** first to beat JPEG on the class drop | **confirmed**: 42.4% [0.381, 0.468] vs JPEG 29.4% [0.256, 0.335] (registered reference 32.2% [0.283, 0.364]); no lower rung's interval clears JPEG's |
+| Q quantiser | helps the untrained AE (occupancy 80.7% vs activation 50.8%, every seed); hurts the trained one (54.0% vs 65.5%); on the class drop the unquantised version is better for both |
+
+The outcome is the registered row *"rung 6 ahead of rung 3, and rung 6 ahead of rung 5"*:
+reconstruction training is what hurts, not learning. The untrained encoder is a cheap
+baseline, the method's best configuration is pretrained features, and the framing becomes
+representation choice rather than perception.

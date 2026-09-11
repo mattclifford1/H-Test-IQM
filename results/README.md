@@ -27,6 +27,7 @@ python -m experiments.summarise > results/SUMMARY.txt
 | `exp7_code_origin.csv` | `exp7_code_origin.py` | part × comparison × encoder × test × n (pre-registered) |
 | `exp7_checks.csv` | ” | the pre-registered checks, per encoder × dataset |
 | `exp7_diagnostics.csv` | `exp7_diagnostics.py` | post-hoc diagnostics — **exploratory** |
+| `exp8_featuriser_ladder.csv` | `exp8_featuriser_ladder.py` | part × featuriser arm × n × k (pre-registered) |
 | `SUMMARY.txt` | `summarise.py` | — the rendered tables |
 
 The headline numbers these produced are written up in [FINDINGS.md](../FINDINGS.md) §2b. In

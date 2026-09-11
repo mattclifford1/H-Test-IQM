@@ -26,6 +26,7 @@ uv run python -m experiments.exp1_power_curve
 | 6 | `exp6_checkpoints.py` | `results/exp6_checkpoints.csv` | minutes |
 | 7 | `exp7_code_origin.py` | `results/exp7_code_origin.csv`, `exp7_checks.csv` | ~5 min (+5 min cache build) — pre-registered in `PREREGISTRATION.md` |
 | 7b | `exp7_diagnostics.py` | `results/exp7_diagnostics.csv` | ~5 min — exploratory |
+| 8 | `exp8_featuriser_ladder.py` | `results/exp8_featuriser_ladder.csv` | ~4 min (+5 min caches; keep `--batch-size 32`) — pre-registered |
 | — | `summarise.py` | the tables, on stdout | seconds |
 | — | `make_figures.py` | `figures/fig*.png` and `.pdf` | seconds |
 

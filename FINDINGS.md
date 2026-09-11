@@ -59,6 +59,15 @@ was **recomputed here** (with `~/anaconda3/envs/h_data/bin/python`). Nothing is 
 >   false-positive rate *conditional on one fixed split*. Redrawn per repeat, every scorer is
 >   calibrated. The project's calibration claims survive, but the protocol should change.
 
+> **Update 2026-09-11 — exp8 (§2.9.9), the featuriser ladder.** Pre-registered; every
+> prediction held. An **ImageNet-pretrained ResNet-18** detects CIFAR-10 vs CIFAR-100 88.5% of
+> the time at n = 100, where the untrained AE encoder manages 16% and needs n ≈ 500 to reach
+> 80%. It is also the first featuriser to beat JPEG bytes at dropping one class (42–53% vs
+> 29%). Untrained *convolutional* features — the AE's or a ResNet's — are a solid middle rung
+> (76–84% at n = 500), far above colour moments (29%) or a random pixel projection (22%). So
+> exp7's "untrained beats trained" is about **reconstruction training**, not learning: the
+> perceptual autoencoder is dominated on every comparison by an off-the-shelf network.
+
 ---
 
 ## 1. What the project is
@@ -663,6 +672,91 @@ exp6's 14% for `ssim-2-u` was this effect, and any future control should redraw 
 per repeat — the fix is ten lines (`exp7_diagnostics.redraw_control`), and it should replace
 `control-disjoint` in `common.py`.
 
+### 2.9.9 The featuriser ladder (exp8, pre-registered) — pretrained features dominate
+
+**Question.** exp7's untrained encoder could be winning because the difference is low-level,
+because reconstruction training specifically discards information, or because untrained
+convolutional features really are competitive. Pre-registered 2026-09-11
+(`experiments/PREREGISTRATION.md`, commit `e3c3ee8`, before the script or its scorers existed).
+
+**Design.** Every featuriser through the same held-out logistic C2ST, every null redrawn per
+repeat (§2.9.8). `experiments/exp8_featuriser_ladder.py`, featurisers in
+`h_test_IQM/scorers/featurisers.py`; `results/exp8_featuriser_ladder.csv`;
+`figures/fig9_featuriser_ladder`. Caches under 5 min, experiment 4 min.
+
+**CIFAR-10 vs CIFAR-100, detection rate (%) — rung means, seeds or channel subsets in
+brackets:**
+
+| rung | featuriser | n = 100 | 250 | 500 | 1000 |
+|---|---|---|---|---|---|
+| ref | JPEG bytes (scalar KS) | 3 | 10 | 13 | 15 |
+| 2 | random pixel projection, 64-D | 8 | 11 | 22 (22/18/24) | 49 |
+| 1 | colour moments, 6-D | 9 | 17 | 29 | 53 |
+| 3q | untrained AE, unquantised | 12 | 24 | 51 (56/46/51) | 90 |
+| 4 | natural AE `mse-2`, occupancy | 12 | 23 | 54 | 89 |
+| 4q | natural AE `mse-2`, unquantised | 14 | 29 | 66 | 97 |
+| 5 | untrained ResNet-18, 512-D | 14 | 43 | 76 (80/76/72) | 99 |
+| 3 | **untrained AE, occupancy (exp7's winner)** | 16 | 44 | **81** (93/82/68) | 100 |
+| 5m | untrained ResNet-18, 64 channels | 16 | 38 | 84 (84/89/80) | 99 |
+| 6m | ImageNet ResNet-18, 64 channels | 54 | 98 | 100 | 100 |
+| 6 | **ImageNet ResNet-18, 512-D** | **89** | **100** | 100 | 100 |
+
+Rung 3 replicates exp7 (93/82/68 against 94/82/72 there, on independent draws).
+
+**Against the registration — every prediction held**, landing in the registered row "rung 6
+ahead of rung 3 and of rung 5":
+
+- **P1** ImageNet beats the untrained AE: +19.3 pts at n = 500, every member, also at matched
+  64-D. The gap is widest at small n — 88.5% vs 16.0% at n = 100.
+- **P2** not colour: rung 3 beats colour moments by 51.7 pts. **P3** convolution matters: it
+  beats a random pixel projection by 59.0 pts.
+- **P4** ImageNet beats the *untrained* ResNet: +24.0 pts (512-D), +15.8 (64-D). exp7's
+  "untrained beats trained" does not generalise to ImageNet pretraining.
+- **P5** the class drop: ImageNet 42.4% [38.1, 46.8] against JPEG 29.4% [25.6, 33.5] — the
+  first featuriser to clear it, with 64-channel subsets reaching 49.6–55.4%. Nothing below
+  rung 6 clears JPEG.
+- **P6** 23 of 23 redrawn nulls calibrated (4.0–6.3%).
+- The pre-registered identity check failed as first run and passed under matched conditions:
+  re-scoring at batch 64 flipped single code elements (max 1/256, 0.05% of cells); at the
+  cache's batch size of 32 the match is exact. The code is unchanged — cuDNN picks different
+  algorithms by batch size, and 0.017% of activations sit within 1e-5 of the quantiser
+  boundary. **Batch size is part of a cached code's definition**; keep it at 32.
+
+**The quantiser (registered with no prediction).** For the untrained encoder, sign
+quantisation *helps* a lot: occupancy 80.7% vs unquantised activation 50.8% at n = 500, in
+every seed. For the natural-trained encoder it *hurts*: 54.0% vs 65.5%. On the class drop the
+unquantised version wins for both. No account is offered; it is recorded.
+
+**Exploratory observations, not registered:**
+
+- **Sample efficiency is the headline number.** ImageNet features at n = 100 (88.5%) outperform
+  the untrained AE at n = 500 (80.7%) — a 5× saving in images — and the perceptual AE at
+  n = 500 (54.0%) by a wider margin still.
+- **Untrained convolutional features are architecture-robust.** The untrained AE and the
+  untrained ResNet land within about 6 points of each other at every n, and at n = 250–500
+  detect roughly three times as often as the pixel-level rungs. "Random convolutional features" is a real, reproducible middle rung — just not
+  the top one.
+- **Dimension against n matters for the C2ST.** 64-channel subsets beat full 512-D features on
+  the class drop (53.1% vs 42.4%) and for the untrained ResNet at n = 500, but lose badly at
+  n = 100 (54% vs 89%). The logistic C2ST trains on n rows, so its regularisation is doing
+  real work and has never been tuned. Any featuriser comparison is partly a comparison of
+  how well a fixed classifier copes with that featuriser's dimension.
+- **Relation to prior work.** A C2ST on pretrained deep features is, as far as I recall, the
+  setting of Lopez-Paz & Oquab, *Revisiting classifier two-sample tests* (ICLR 2017) — so rung
+  6's strength is expected rather than a discovery. **To verify and cite.** What this study
+  adds is the calibration, the sample-size characterisation, and the negative result for
+  reconstruction-trained perceptual features.
+
+**What it means for the project.** The perceptual autoencoder is dominated on every
+comparison run here by an off-the-shelf ImageNet ResNet-18, and beaten even by the same
+architecture untrained. The natural-image premise was the wrong axis: what matters is what a
+representation was trained *for*, and reconstruction is a poor objective for detecting
+distribution shift. A paper that survives this is a practical one — *how many images does it
+take to detect a dataset shift, and with what features* — with calibrated tests, a sample-size
+table per featuriser, the negative result for reconstruction features, and the
+fixed-partition lesson of §2.9.8. It needs more dataset pairs than CIFAR-10/100 before it is
+one.
+
 ---
 
 ## 3. Bugs and methodological problems
@@ -886,6 +980,8 @@ Then, in the second pass (§2b):
 > multivariate result is real but belongs to the *random* encoder, not the trained one. What
 > exp7 forces, in order:
 >
+> **Done 2026-09-11 — see §2.9.9. 0a below is complete; the next list follows it.**
+>
 > 0a. **exp8 — a featuriser ladder.** Same pipeline (64-D-ish feature → C2ST, redrawn
 >     partitions), featurisers ordered by how much they know about images: per-channel colour
 >     moments (6-D, knows nothing) → random projection of raw pixels (no convolution) →
@@ -904,6 +1000,23 @@ Then, in the second pass (§2b):
 > 0d. **A comparison between the one-class and CIFAR-100 difficulty levels.** One-class
 >     saturates at 100% for every encoder and CIFAR-10 vs CIFAR-100 separates them; the
 >     contamination sweep (exp2) at the 64-D code would give the missing intermediate rungs.
+>
+> **After exp8, in order:**
+>
+> 1. **More dataset pairs.** Everything in exp7–8 rests on CIFAR-10 vs CIFAR-100 plus a class
+>    drop. The practical-study framing needs a spread of shift types and sizes — the
+>    contamination sweep (exp2) with the ladder's featurisers is the cheapest route to a
+>    graded set, and CIFAR-10.1 / CINIC-10 would add natural "same task, new collection"
+>    shifts if they can be sourced.
+> 2. **Tune, or replace, the classifier in the C2ST.** Dimension against n visibly matters
+>    (§2.9.9). Cross-validated regularisation strength inside the training half, or an MMD
+>    with a learned or median-heuristic kernel, before any featuriser ranking is quoted as
+>    final.
+> 3. **A stronger pretrained rung.** ResNet-18 already saturates at n = 250; one self-supervised
+>    featuriser (e.g. a DINO/CLIP image encoder, if available offline) and a larger supervised
+>    one would say whether the ceiling is the featuriser or the comparison.
+> 4. **Check and cite the prior art** (Lopez-Paz & Oquab 2017 and the FID/two-sample-testing
+>    literature) before writing any framing sentence.
 
 The §2b suite answered questions 1 and 6 of the previous list. What it forces instead:
 
