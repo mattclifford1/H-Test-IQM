@@ -178,6 +178,87 @@ def exp6():
         print('  natural-image statistics" premise does not survive.')
 
 
+def exp7():
+    d = _load('exp7_code_origin.csv')
+    if d is None:
+        return
+    _head('EXP 7 -- CODE ORIGIN: natural vs noise-trained vs untrained, at the 64-D code')
+    groups = ['natural', 'noise', 'random']
+    short = lambda e: e.replace('entropy-2-', '').replace('-64d', '')
+
+    # the pre-registered primary comparison
+    prim = d[(d.part == 'primary') & (d.representation == '64d')]
+    for comp in ('cifar10-vs-cifar100', 'cifar-vs-oneclass'):
+        cell = prim[prim.comparison == comp]
+        print(f'\n-- {comp}: detection rate (%), 64-D C2ST, 200 repeats --')
+        t = cell.pivot_table(index='encoder', columns='n', values='detect')
+        t.index = [short(e) for e in t.index]
+        print(t.to_string(float_format=PCT))
+        g = cell.groupby(['group', 'n']).detect.mean().unstack()
+        print('   group means:')
+        print(g.reindex(groups).to_string(float_format=PCT))
+
+    # P1: natural vs noise, objective-matched pairs, at n = 1000
+    c = prim[(prim.comparison == 'cifar10-vs-cifar100') & (prim.n == 1000)]
+    nat = c[c.group == 'natural'].set_index('objective').detect
+    noi = c[c.group == 'noise'].set_index('objective').detect
+    ran = c[c.group == 'random'].set_index('encoder').detect
+    print('\n-- the registered predictions, CIFAR-10 vs CIFAR-100, n = 1000 --')
+    gap = nat - noi
+    print(f'  P1 natural - noise: group means {nat.mean():.1%} vs {noi.mean():.1%} '
+          f'({100 * (nat.mean() - noi.mean()):+.1f} pts); per objective '
+          + ', '.join(f'{o} {100 * v:+.1f}' for o, v in gap.items()))
+    print(f'  P2 natural - random: {nat.mean():.1%} vs {ran.mean():.1%} '
+          f'({100 * (nat.mean() - ran.mean()):+.1f} pts); random seeds '
+          + ', '.join(f'{short(e)} {v:.1%}' for e, v in ran.items()))
+    c5 = prim[(prim.comparison == 'cifar10-vs-cifar100') & (prim.n == 500)]
+    print('  (n = 1000 saturates the random group; at n = 500 the group means are '
+          + ', '.join(f'{g} {c5[c5.group == g].detect.mean():.1%}' for g in groups) + ')')
+
+    # calibration and the rest
+    ctl = d[d.part == 'control']
+    print('\n-- control-disjoint false-positive rate (%), fixed partitions --')
+    t = ctl.pivot_table(index='encoder', columns=['representation', 'test', 'n'],
+                        values='detect')
+    t.index = [short(e) for e in t.index]
+    print(t.to_string(float_format=lambda x: f'{x*100:.1f}'))
+
+    cd = d[d.part == 'classdrop']
+    print('\n-- k = 9 class drop, n = 2000, fixed partitions: detection (%) --')
+    t = cd.pivot_table(index='encoder', columns='representation', values='detect')
+    t.index = [short(e) for e in t.index]
+    print(t.to_string(float_format=lambda x: f'{x*100:.1f}'))
+
+    sc = d[d.part == 'scalar']
+    print('\n-- scalar KS, CIFAR-10 vs CIFAR-100, n = 4000: detection (%) and mean KS --')
+    t = sc.set_index('encoder')[['detect', 'effect_mean']]
+    t.index = [short(e) for e in t.index]
+    print(t.to_string(formatters={'detect': lambda x: f'{x*100:.0f}',
+                                  'effect_mean': FMT}))
+
+    x = _load('exp7_diagnostics.csv')
+    if x is None:
+        return
+    _head('EXP 7 -- POST-HOC DIAGNOSTICS (exploratory, not pre-registered)')
+    ctl = x[x.diagnostic == 'control']
+    print('\n-- control: fixed partition vs a partition redrawn every repeat (FP %) --')
+    t = ctl.set_index(['scorer', 'representation'])[['fixed_fp', 'redraw_fp', 'split_ks']]
+    print(t.to_string(formatters={'fixed_fp': lambda v: f'{v*100:.1f}',
+                                  'redraw_fp': lambda v: f'{v*100:.1f}',
+                                  'split_ks': lambda v: '' if pd.isna(v) else f'{v:.4f}'}))
+    dims = x[x.diagnostic == 'dims'].set_index('scorer')[
+        ['live_channels', 'participation_ratio', 'c2st_acc_n1000']]
+    print('\n-- effective dimension of each code (CIFAR-10) vs C2ST accuracy --')
+    print(dims.to_string(float_format=lambda v: f'{v:.3f}'))
+    cr = x[x.diagnostic == 'classdrop_redraw']
+    if len(cr):
+        print('\n-- class drop with the partition redrawn every repeat (%) --')
+        cr = cr.assign(rate=cr.redraw_detect.fillna(cr.redraw_fp))
+        t = cr.pivot_table(index='scorer', columns=['representation', 'k_classes'],
+                           values='rate')
+        print(t.to_string(float_format=lambda v: f'{v*100:.1f}'))
+
+
 # --- the first pass, kept for the record -----------------------------------------------
 def prior():
     d = _load('density_grid.csv', prior=True)
@@ -204,7 +285,7 @@ def prior():
 
 
 SECTIONS = {'exp1': exp1, 'exp2': exp2, 'exp3': exp3, 'exp4': exp4,
-            'exp5': exp5, 'exp6': exp6, 'prior': prior}
+            'exp5': exp5, 'exp6': exp6, 'exp7': exp7, 'prior': prior}
 
 
 def main():

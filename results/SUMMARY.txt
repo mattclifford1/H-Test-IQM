@@ -562,6 +562,147 @@ cifar-vs-uniform               100             100             100              
   natural-image statistics" premise does not survive.
 
 ==============================================================================
+EXP 7 -- CODE ORIGIN: natural vs noise-trained vs untrained, at the 64-D code
+==============================================================================
+
+-- cifar10-vs-cifar100: detection rate (%), 64-D C2ST, 200 repeats --
+n          250   500   1000
+mse          28    55    92
+mse-u        16    32    66
+nlpd         22    47    88
+nlpd-u       15    28    60
+random-s0    55    94   100
+random-s1    46    82   100
+random-s2    32    72    99
+ssim         22    46    84
+ssim-u       22    46    75
+   group means:
+n        250   500   1000
+group                    
+natural    24    49    88
+noise      18    35    67
+random     44    82   100
+
+-- cifar-vs-oneclass: detection rate (%), 64-D C2ST, 200 repeats --
+n          250   500   1000
+mse         100   100   100
+mse-u       100   100   100
+nlpd        100   100   100
+nlpd-u      100   100   100
+random-s0   100   100   100
+random-s1   100   100   100
+random-s2   100   100   100
+ssim        100   100   100
+ssim-u      100   100   100
+   group means:
+n        250   500   1000
+group                    
+natural   100   100   100
+noise     100   100   100
+random    100   100   100
+
+-- the registered predictions, CIFAR-10 vs CIFAR-100, n = 1000 --
+  P1 natural - noise: group means 88.2% vs 67.0% (+21.2 pts); per objective mse +26.0, ssim +9.0, nlpd +28.5
+  P2 natural - random: 88.2% vs 99.7% (-11.5 pts); random seeds random-s0 100.0%, random-s1 100.0%, random-s2 99.0%
+  (n = 1000 saturates the random group; at n = 500 the group means are natural 49.3%, noise 35.2%, random 82.5%)
+
+-- control-disjoint false-positive rate (%), fixed partitions --
+representation  64d scalar
+test           C2ST     KS
+n              1000   4000
+mse             5.8    4.2
+mse-u           5.3    3.4
+nlpd            5.5    7.5
+nlpd-u          3.8    3.2
+random-s0       3.6    6.0
+random-s1       3.9    2.9
+random-s2       5.5    6.4
+ssim            4.6    6.0
+ssim-u          5.2    8.7
+jpeg_bytes      NaN    3.6
+
+-- k = 9 class drop, n = 2000, fixed partitions: detection (%) --
+representation  64d  scalar
+mse            15.2     7.4
+mse-u          13.8     8.0
+nlpd           20.4    25.0
+nlpd-u         15.4    36.2
+random-s0      20.8    35.4
+random-s1      18.0     7.2
+random-s2      18.2    32.2
+ssim           14.0    16.4
+ssim-u         15.8    53.0
+jpeg_bytes      NaN    30.8
+
+-- scalar KS, CIFAR-10 vs CIFAR-100, n = 4000: detection (%) and mean KS --
+           detect effect_mean
+mse            98      0.0477
+ssim           99      0.0540
+nlpd           99      0.0532
+mse-u          99      0.0455
+ssim-u         71      0.0358
+nlpd-u         35      0.0275
+random-s0     100      0.0775
+random-s1     100      0.0661
+random-s2     100      0.0671
+jpeg_bytes     90      0.0361
+
+==============================================================================
+EXP 7 -- POST-HOC DIAGNOSTICS (exploratory, not pre-registered)
+==============================================================================
+
+-- control: fixed partition vs a partition redrawn every repeat (FP %) --
+                                       fixed_fp redraw_fp split_ks
+scorer                  representation                            
+entropy-2-mse-64d       scalar              4.2       4.1   0.0081
+                        64d                 5.8       4.4      NaN
+entropy-2-ssim-64d      scalar              6.0       3.6   0.0091
+                        64d                 4.6       3.0      NaN
+entropy-2-nlpd-64d      scalar              7.5       4.5   0.0113
+                        64d                 5.5       6.8      NaN
+entropy-2-mse-u-64d     scalar              3.4       3.7   0.0045
+                        64d                 5.3       4.4      NaN
+entropy-2-ssim-u-64d    scalar              8.7       4.8   0.0111
+                        64d                 5.2       5.6      NaN
+entropy-2-nlpd-u-64d    scalar              3.2       4.2   0.0047
+                        64d                 3.8       5.0      NaN
+entropy-2-random-s0-64d scalar              6.0       4.0   0.0100
+                        64d                 3.6       5.2      NaN
+entropy-2-random-s1-64d scalar              2.9       4.7   0.0064
+                        64d                 3.9       5.6      NaN
+entropy-2-random-s2-64d scalar              6.4       4.6   0.0089
+                        64d                 5.5       6.6      NaN
+jpeg_bytes              scalar              3.6       4.6   0.0060
+
+-- effective dimension of each code (CIFAR-10) vs C2ST accuracy --
+                         live_channels  participation_ratio  c2st_acc_n1000
+scorer                                                                     
+entropy-2-mse-64d               62.000                2.694           0.547
+entropy-2-ssim-64d              53.000                2.459           0.542
+entropy-2-nlpd-64d              56.000                2.875           0.545
+entropy-2-mse-u-64d             64.000                1.507           0.534
+entropy-2-ssim-u-64d            64.000                1.925           0.539
+entropy-2-nlpd-u-64d            64.000                2.037           0.531
+entropy-2-random-s0-64d         61.000                2.842           0.586
+entropy-2-random-s1-64d         62.000                2.295           0.574
+entropy-2-random-s2-64d         63.000                3.182           0.565
+
+-- class drop with the partition redrawn every repeat (%) --
+representation           64d      scalar     
+k_classes               9.0  10.0   9.0  10.0
+scorer                                       
+entropy-2-mse-64d       17.0  7.2    9.0  3.2
+entropy-2-mse-u-64d     12.6  5.6    5.4  2.4
+entropy-2-nlpd-64d      16.4  3.2   20.4  4.6
+entropy-2-nlpd-u-64d    14.6  5.0   36.0  4.4
+entropy-2-random-s0-64d 20.2  5.2   33.4  4.4
+entropy-2-random-s1-64d 19.2  4.6    5.8  3.8
+entropy-2-random-s2-64d 18.8  5.6   27.2  3.8
+entropy-2-ssim-64d      15.4  6.6   16.4  4.8
+entropy-2-ssim-u-64d    13.6  3.2   48.2  3.4
+jpeg_bytes               NaN  NaN   32.2  5.0
+
+==============================================================================
 PRIOR PASS (results/prior/) -- single-draw main table, n=4000, 256px
 ==============================================================================
 scorer               entropy-2-mse  jpeg_bytes  pixel_std  pixel_entropy  BRISQUE

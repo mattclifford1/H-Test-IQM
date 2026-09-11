@@ -400,6 +400,118 @@ def fig7_multivariate():
     _save(fig, 'fig7_multivariate')
 
 
+# --- fig 8 -------------------------------------------------------------------------------
+GROUP_COLOURS = {'natural': '#2ca02c', 'noise': '#ff7f0e', 'random': '#7f7f7f',
+                 'reference': '#1f77b4'}
+GROUP_LABEL = {'natural': 'trained on natural images', 'noise': 'trained on uniform noise',
+               'random': 'untrained (random init)', 'reference': 'JPEG bytes (scalar KS)'}
+
+
+def _short(enc):
+    return enc.replace('entropy-2-', '').replace('-64d', '')
+
+
+def fig8_code_origin():
+    '''
+    exp7: nine encoders at the 64-D code, coloured by what each was trained on, so "does
+    training on natural images matter" is read off the colour ordering. Panels (c) and (d)
+    use the post-hoc redrawn-partition protocol (exp7_diagnostics) -- the fixed-partition
+    control reports a rate conditional on one split, see FINDINGS.md.
+    '''
+    d = _load('exp7_code_origin.csv')
+    x = _load('exp7_diagnostics.csv')
+    if d is None or x is None:
+        print('  skip fig8 -- needs exp7_code_origin.csv and exp7_diagnostics.csv')
+        return
+
+    fig, axes = plt.subplots(1, 4, figsize=(13, 3.5),
+                             gridspec_kw=dict(width_ratios=[1, 1, 1.1, 1.1]))
+    sizes = sorted(d[d.part == 'primary'].n.unique())
+
+    def _lines(ax, comp, value, reference=True):
+        sub = d[(d.part == 'primary') & (d.comparison == comp)]
+        for enc, cell in sub.groupby('encoder'):
+            g = cell.group.iloc[0]
+            if g == 'reference' and not reference:
+                continue
+            cell = cell.sort_values('n')
+            ax.plot(cell.n, cell[value] * (100 if value == 'detect' else 1), marker='o',
+                    ms=3, lw=3.4 if g == 'reference' else 1.4,
+                    alpha=0.35 if g == 'reference' else 0.9, color=GROUP_COLOURS[g])
+        ax.set_xscale('log')
+        ax.set_xticks(sizes)
+        ax.set_xticklabels([str(n) for n in sizes])
+        ax.minorticks_off()
+        ax.set_xlabel('images per side ($n$)')
+
+    # (a) the primary comparison: detection rate
+    ax = axes[0]
+    _lines(ax, 'cifar10-vs-cifar100', 'detect')
+    ax.axhline(80, color='k', ls=':', lw=0.8)
+    ax.axhline(ALPHA * 100, color='k', ls='--', lw=0.8)
+    ax.set_ylim(-3, 103)
+    ax.set_ylabel('detection rate (%)')
+    ax.set_title('(a) CIFAR-10 vs CIFAR-100\n64-D C2ST, 200 repeats', fontsize=9)
+
+    # (b) one-class saturates at 100% for every encoder, so show the effect size instead
+    ax = axes[1]
+    _lines(ax, 'cifar-vs-oneclass', 'effect_mean', reference=False)
+    ax.axhline(0.5, color='k', ls='--', lw=0.8)
+    ax.set_ylabel('C2ST held-out accuracy')
+    ax.set_title('(b) CIFAR-10 vs one class\n(detection is 100% everywhere)', fontsize=9)
+
+    # (c) k = 9 class drop, redrawn partitions: 64-D bar, scalar tick, JPEG band
+    cr = x[x.diagnostic == 'classdrop_redraw']
+    ax = axes[2]
+    encs = [e for e in cr.scorer.unique() if e != 'jpeg_bytes']
+    for i, enc in enumerate(encs):
+        g = cr[cr.scorer == enc].group.iloc[0]
+        v = cr[(cr.scorer == enc) & (cr.representation == '64d') & (cr.k_classes == 9)].iloc[0]
+        s = cr[(cr.scorer == enc) & (cr.representation == 'scalar')
+               & (cr.k_classes == 9)].iloc[0]
+        ax.bar(i, v.redraw_detect * 100, color=GROUP_COLOURS[g], width=0.7)
+        ax.errorbar(i, v.redraw_detect * 100,
+                    yerr=[[100 * (v.redraw_detect - v.redraw_lo)],
+                          [100 * (v.redraw_hi - v.redraw_detect)]],
+                    color='k', lw=0.8, capsize=2)
+        ax.plot(i, s.redraw_detect * 100, marker='_', ms=12, mew=2, color='k')
+    j = cr[(cr.scorer == 'jpeg_bytes') & (cr.k_classes == 9)]
+    if len(j):
+        ax.axhline(j.redraw_detect.iloc[0] * 100, color=GROUP_COLOURS['reference'], lw=3.4,
+                   alpha=0.35)
+    ax.axhline(ALPHA * 100, color='k', ls='--', lw=0.8)
+    ax.set_xticks(range(len(encs)))
+    ax.set_xticklabels([_short(e) for e in encs], rotation=60, fontsize=7)
+    ax.set_ylim(0, 60)
+    ax.set_ylabel('detection rate (%)')
+    ax.set_title('(c) drop 1 of 10 classes, $n=2000$\nbar = 64-D, tick = scalar', fontsize=9)
+
+    # (d) calibration: fixed partition (filled) vs redrawn every repeat (hollow)
+    ctl = x[(x.diagnostic == 'control') & (x.representation == '64d')]
+    ax = axes[3]
+    for i, (_, r) in enumerate(ctl.iterrows()):
+        c = GROUP_COLOURS[r.group]
+        for off, fp, lo, hi, face in ((-0.17, r.fixed_fp, r.fixed_lo, r.fixed_hi, c),
+                                      (0.17, r.redraw_fp, r.redraw_lo, r.redraw_hi, 'white')):
+            ax.errorbar(i + off, fp * 100, yerr=[[100 * (fp - lo)], [100 * (hi - fp)]],
+                        fmt='o', ms=4, color=c, mfc=face, capsize=2, lw=1)
+    ax.axhline(ALPHA * 100, color='k', ls='--', lw=0.8)
+    ax.set_xticks(range(len(ctl)))
+    ax.set_xticklabels([_short(e) for e in ctl.scorer], rotation=60, fontsize=7)
+    ax.set_ylim(0, 10)
+    ax.set_ylabel('false-positive rate (%)')
+    ax.set_title('(d) calibration, 64-D C2ST, $n=1000$\nfilled = fixed split, '
+                 'hollow = redrawn', fontsize=9)
+
+    handles = [Line2D([], [], color=GROUP_COLOURS[g], lw=3.4 if g == 'reference' else 1.4,
+                      alpha=0.35 if g == 'reference' else 1.0, label=GROUP_LABEL[g])
+               for g in ('natural', 'noise', 'random', 'reference')]
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    fig.legend(handles=handles, loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.01),
+               fontsize=8)
+    _save(fig, 'fig8_code_origin')
+
+
 FIGURES = {
     'fig1': fig1_power_curve,
     'fig2': fig2_contamination,
@@ -408,6 +520,7 @@ FIGURES = {
     'fig5': fig5_resolution,
     'fig6': fig6_calibration,
     'fig7': fig7_multivariate,
+    'fig8': fig8_code_origin,
 }
 
 
