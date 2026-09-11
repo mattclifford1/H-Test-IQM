@@ -127,3 +127,34 @@ content does not matter" from "nothing about training matters").
 | anything else | reported as found, without a story fitted to it |
 
 Whichever row it lands in, that row is what gets written up.
+
+---
+
+## Outcome (added 2026-09-11, after running — the registration above is unedited)
+
+Full numbers: `python -m experiments.summarise --only exp7`, written up in `FINDINGS.md`
+§2.9.7. Scored against what was registered:
+
+| | outcome |
+|---|---|
+| Check 1 — pipeline identity | **passed** exactly: max difference 0.0 on all 12 checkpoint × dataset pairs |
+| Check 2 — non-degenerate random codes | **failed as worded.** Occupancy is fine (0.43–0.45), but the random encoders have 1–3 constant channels. The criterion was mis-specified: the natural-trained encoders under test have *more* (mse 2, nlpd 8, ssim 11). Proceeded anyway, and say so here; live-channel counts are reported beside every result |
+| Check 3 / P5 — calibration | **failed for 1 of 9.** `random-s0` rejected 3.6% [2.6%, 4.9%] — conservative. Excluded from interpretation per the rule; every conclusion below holds without it |
+| ssim-u decision rule | **fired**: 8.7% [7.1%, 10.6%] at 1000 repeats. `ssim-2-u` excluded from scalar conclusions |
+| **P1** natural ahead of noise | **confirmed.** 88.2% vs 67.0% (+21.2 pts) at n = 1000; ahead in all three objective pairs (mse +26.0, ssim +9.0, nlpd +28.5) |
+| **P2** natural ahead of random | **refuted, in the opposite direction.** Random 99.7% vs natural 88.2% at n = 1000 (saturated); at n = 500, 82.5% vs 49.3%, every random seed above every trained encoder. Holds with `random-s0` excluded |
+| P3 noise vs random | no prediction registered. Random is far ahead |
+| **P4** 64-D rescues k = 9 | **confirmed directionally, not in substance.** Natural mse 64-D 15.2% vs its scalar 7.4% — but JPEG bytes reach 30.8% |
+
+The outcome, untrained > natural > noise, is not a row of the reading table. It falls under
+"anything else", and is reported as found.
+
+Two things were done after seeing the results, and they are **exploratory**, in
+`experiments/exp7_diagnostics.py`. Both change how two of the rows above should be read, not
+what was registered:
+
+- The fixed-partition control measures a rate *conditional on one split*. Redrawing the
+  partition every repeat brings `ssim-2-u` to 4.8% and `random-s0` to 5.2% — so both
+  exclusions above were conservative, and the scorers are calibrated.
+- The class drop inherits the same problem, so it was re-run with redrawn partitions and its
+  own k = 10 null. Natural mse 64-D: 17.0% vs scalar 9.0% — P4's reading is unchanged.

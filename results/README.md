@@ -24,6 +24,9 @@ python -m experiments.summarise > results/SUMMARY.txt
 | `exp5_multivariate.csv` | `exp5_multivariate.py` | comparison × representation × test × n |
 | `exp5_multivariate_perm.csv` | ” | the energy / MMD cells (fewer repeats) |
 | `exp6_checkpoints.csv` | `exp6_checkpoints.py` | comparison × autoencoder checkpoint |
+| `exp7_code_origin.csv` | `exp7_code_origin.py` | part × comparison × encoder × test × n (pre-registered) |
+| `exp7_checks.csv` | ” | the pre-registered checks, per encoder × dataset |
+| `exp7_diagnostics.csv` | `exp7_diagnostics.py` | post-hoc diagnostics — **exploratory** |
 | `SUMMARY.txt` | `summarise.py` | — the rendered tables |
 
 The headline numbers these produced are written up in [FINDINGS.md](../FINDINGS.md) §2b. In

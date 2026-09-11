@@ -37,6 +37,28 @@ was **recomputed here** (with `~/anaconda3/envs/h_data/bin/python`). Nothing is 
 > perceptual scorer beats the trivial baselines. The premise, the scalar statistic, and the
 > checkpoint choice all need rewriting. See §5.
 
+> **Update 2026-09-11 — exp7 (§2.9.7) changes points 2 and 4.** Crossing the two was
+> pre-registered (`experiments/PREREGISTRATION.md`) and it came out a way no row of the
+> registered reading table anticipated:
+>
+> - **An untrained, randomly initialised encoder is the best detector of all.** On CIFAR-10 vs
+>   CIFAR-100 at n = 500, 64-D C2ST: untrained **82.5%**, natural-trained 49.3%, noise-trained
+>   35.2%, JPEG bytes 10.5%. Every random seed beats every trained encoder, and the same
+>   ordering holds on the effect size of every other comparison.
+> - So point 2 needs restating: the multivariate win is **not** evidence for the perceptual
+>   autoencoder. It is evidence for *a random convolutional projection, quantised and kept as
+>   a vector*. Training on anything costs detection power; training on natural images costs
+>   less than training on noise.
+> - Point 4's "100.1% recovery" was a mean dominated by easy and resampling-confounded
+>   comparisons. On the one hard, clean pair, natural training beats noise training
+>   (88% vs 67% at the 64-D code) — so the premise is not simply false. But it is beside the
+>   point, since the untrained encoder beats both.
+> - The class-drop use case is **not** rescued by the code: every 64-D encoder detects a dropped
+>   class 13–20% of the time at n = 2000, against 32% for JPEG bytes.
+> - Methodological (§2.9.8): the disjoint-partition control used everywhere reports a
+>   false-positive rate *conditional on one fixed split*. Redrawn per repeat, every scorer is
+>   calibrated. The project's calibration claims survive, but the protocol should change.
+
 ---
 
 ## 1. What the project is
@@ -501,6 +523,146 @@ Second, more immediately actionable: **`mse-2`, the checkpoint used for every re
 project, is the worst of the three natural-trained ones** (0.1310 against ssim's 0.1999, better
 on four of five comparisons). That choice was never tested until now.
 
+> **Qualified 2026-09-11 (§2.9.7).** The 100.1% averages KS over five comparisons, and the
+> average is carried by the easy ones — uniform noise at KS ≈ 0.5 — and by DTD and ImageNet64,
+> which §2.9.3 shows are resampling artifacts. On CIFAR-10 vs CIFAR-100, the only comparison
+> that is both hard and resampling-clean, natural training is ahead: reject rates 1.00 vs 0.33
+> (nlpd), 1.00 vs 0.75 (ssim), 0.98 vs 0.97 (mse), mean KS 0.052 vs 0.037 — about 70%
+> recovery. exp7 confirms the gap at the 64-D code. The `ssim-2-u` control's 14% in the table
+> above is explained in §2.9.8: it is the fixed split, not the scorer.
+
+### 2.9.7 Code origin (exp7, pre-registered) — an untrained encoder is the best detector
+
+**Question.** exp5 ran the 64-D code on one natural-trained encoder; exp6 ran the
+noise-vs-natural comparison on the scalar only. Does the code's detection power come from
+training on natural images? Pre-registered 2026-09-11 in `experiments/PREREGISTRATION.md`
+(commit `5490998`, before the script or its caches existed), with five predictions, three
+checks and a table saying how each outcome would be read.
+
+**Design.** Nine encoders, same architecture, 256 px, 64-D per-channel `+1`-ratio code:
+natural-trained `{mse, ssim, nlpd}-2`, noise-trained `{mse, ssim, nlpd}-2-u`, and the
+architecture **untrained** at seeds 0, 1, 2. The untrained code is the sign pattern of a random
+convolutional projection — the encoder ends in a plain conv and quantises to the nearer of
+{−1, +1}; the sigmoid is on the decoder. Held-out C2ST (the exp5 protocol), 200 repeats.
+`experiments/exp7_code_origin.py`; `results/exp7_code_origin.csv`; `figures/fig8_code_origin`.
+Build 5 min, experiment 4 min.
+
+**CIFAR-10 vs CIFAR-100, detection rate (%):**
+
+| encoder | n = 250 | 500 | 1000 |
+|---|---|---|---|
+| natural `mse` | 28 | 55 | 92 |
+| natural `ssim` | 22 | 46 | 84 |
+| natural `nlpd` | 22 | 47 | 88 |
+| noise `mse-u` | 16 | 32 | 66 |
+| noise `ssim-u` | 22 | 46 | 75 |
+| noise `nlpd-u` | 15 | 28 | 60 |
+| **untrained, seed 0** | **55** | **94** | **100** |
+| **untrained, seed 1** | **46** | **82** | **100** |
+| **untrained, seed 2** | **32** | **72** | **99** |
+| JPEG bytes (scalar KS) | 11 | 10 | 20 |
+| *group mean: natural / noise / untrained* | *24 / 18 / 44* | *49 / 35 / 82* | *88 / 67 / 100* |
+
+Against the registration:
+
+- **P1 confirmed** — natural ahead of noise by 21.2 pts at n = 1000, in all three
+  objective-matched pairs (mse +26.0, ssim +9.0, nlpd +28.5).
+- **P2 refuted, in the opposite direction** — the untrained group is ahead of the
+  natural-trained one, by 11.5 pts at n = 1000 where it saturates and by 33 pts at n = 500,
+  with every random seed above every trained encoder. The registered expectation was the
+  reverse.
+- **P4 confirmed directionally, not in substance** — see the class drop below.
+- The outcome, untrained > natural > noise, is **not a row of the registered reading table**,
+  and is reported as found.
+
+**The ordering is not specific to one comparison.** CIFAR-10 vs one class saturates at 100%
+detection for every encoder, so detection says nothing there, but the effect size — C2ST
+held-out accuracy at n = 1000 — orders the groups identically: untrained 0.713–0.750,
+natural 0.687–0.703, noise 0.666–0.674, no overlap between groups. The scalar arm agrees too:
+at n = 4000 the untrained encoders' *mean occupancy* alone gives KS 0.066–0.078 on CIFAR-10
+vs CIFAR-100, against 0.048–0.054 for natural-trained and 0.028–0.046 for noise-trained.
+
+**The class drop is not rescued.** Dropping one of ten CIFAR-10 classes, n = 2000, partitions
+redrawn every repeat (§2.9.8), k = 10 null alongside:
+
+| | natural 64-D | noise 64-D | untrained 64-D | JPEG bytes |
+|---|---|---|---|---|
+| k = 9 detection | 15.4–17.0% | 12.6–14.6% | 18.8–20.2% | **32.2%** |
+| k = 10 null | 3.2–7.2% | 3.2–5.6% | 4.6–5.6% | 5.0% |
+
+Same ordering, but every code lands at about half of what a JPEG byte count manages. The
+64-D code roughly doubles the natural `mse` scalar (17.0% vs 9.0%), which is what P4
+registered, and it does not come close to making "does a new class add density" a use case
+this method serves. Scalar class-drop detection is also a lottery across random seeds —
+33.4%, 5.8% and 27.2% for seeds 0, 1, 2 — which is the clearest demonstration that one
+mean-occupancy number is at the mercy of which projection it happens to be.
+
+**Checks, and where the registration was not followed as written.**
+
+- Check 1 (the 64-D row mean equals the cached scalar) passed with a maximum difference of
+  exactly 0.0 — the caches are row-aligned and the random encoders' scalars are legitimate.
+- Check 2 failed as worded: the untrained encoders have 1–3 constant channels. The criterion
+  was mis-specified — natural-trained encoders have *more* dead channels (mse 2, nlpd 8, ssim
+  11) and noise-trained have none — so it was not applied. Live-channel counts are below.
+- Check 3 failed for `random-s0` (3.6% [2.6%, 4.9%], conservative). The result holds with it
+  excluded; §2.9.8 shows it is calibrated under a redrawn partition (5.2%).
+- The `ssim-2-u` decision rule fired (8.7% [7.1%, 10.6%]); it is excluded from scalar
+  conclusions. §2.9.8 shows the cause was the fixed split (redrawn: 4.8%).
+
+**Why might an untrained encoder win? (exploratory, `exp7_diagnostics.py`)** Part of it is
+dimension. Participation ratio of each code's covariance on CIFAR-10:
+
+| | live channels | effective dimension | C2ST acc. |
+|---|---|---|---|
+| natural mse / ssim / nlpd | 62 / 53 / 56 | 2.69 / 2.46 / 2.88 | 0.547 / 0.542 / 0.545 |
+| noise mse-u / ssim-u / nlpd-u | 64 / 64 / 64 | 1.51 / 1.93 / 2.04 | 0.534 / 0.539 / 0.531 |
+| untrained s0 / s1 / s2 | 61 / 62 / 63 | 2.84 / 2.30 / 3.18 | 0.586 / 0.574 / 0.565 |
+
+Effective dimension tracks accuracy (Spearman 0.67, p = 0.05, 9 encoders) but does not
+explain it: seed 1 has a lower effective dimension than natural `mse` or `nlpd` and beats
+both. Noise-trained codes are the striking column — all 64 channels alive but nearly
+one-dimensional, i.e. heavily redundant. A reading consistent with everything here, **not
+tested**: reconstruction training spends the code on what reconstruction needs and discards
+the rest; training on noise commits the code hardest; an untrained projection stays
+uncommitted and so keeps more of the low-level statistics that distinguish two datasets. That
+is also consistent with random features being a standard tool in kernel two-sample testing.
+
+**What it means for the project.** The natural-image premise is not simply false — at the
+representation that carries the signal, natural training beats noise training on the hardest
+comparison. But it no longer matters, because no training beats both. The contribution that
+survives is a calibrated two-sample pipeline on a **random convolutional featuriser, kept
+multivariate** — which invites the question every reviewer will ask first: how does it compare
+with other featurisers, from trivial colour statistics up to pretrained networks? That is the
+next experiment (§5.1).
+
+### 2.9.8 The disjoint-partition control reports a conditional rate (exploratory)
+
+`control-disjoint` compares the two fixed halves of the cached CIFAR-10 pool (30 000 each), and
+every repeat re-draws from those same two halves. At n = 4000 a draw is 13% of its half, so the
+realised difference between the halves is a fixed offset shared by every repeat. The
+false-positive rate measured is then the rate **conditional on that one split**, not the
+unconditional rate.
+
+Evidence, from `exp7_diagnostics.py`, scalar KS at n = 4000, 1000 repeats, 10 scorers:
+
+- The realised KS between each scorer's two full halves predicts its fixed-split
+  false-positive rate: **Spearman 0.86, p = 0.001**. Scorers whose halves happen to differ more
+  reject more — both of the "anomalous" ones (`ssim-2-u` 8.7%, `nlpd-2` 7.5%) have the largest
+  split differences.
+- Redrawing the partition on every repeat: spread across scorers falls from **2.0%** to
+  **0.42%** — now under the binomial 0.69% — the mean goes 5.2% → 4.3% (slightly conservative,
+  as expected from ties in a discrete statistic), and intervals excluding 5% fall from 7/10 to
+  1/10. `ssim-2-u`: 8.7% → 4.8%.
+- The 64-D C2ST controls at n = 1000 (3% of a half) were already much closer to 5% under the
+  fixed split — exactly as the account predicts, since the offset shrinks with n / pool.
+
+**Consequences.** Nothing previously claimed as calibrated turns out not to be: under a
+redrawn partition every scorer sits at or just under 5%. exp4's class-drop numbers, which used
+fixed partitions, move little when redone (mse scalar 8.8% → 9.0%, JPEG 31.4% → 32.2%). But
+exp6's 14% for `ssim-2-u` was this effect, and any future control should redraw the partition
+per repeat — the fix is ten lines (`exp7_diagnostics.redraw_control`), and it should replace
+`control-disjoint` in `common.py`.
+
 ---
 
 ## 3. Bugs and methodological problems
@@ -719,6 +881,29 @@ Then, in the second pass (§2b):
   `h_test_IQM/pipeline/multivariate.py`, all checked against a true null.
 
 ### 5.1 Tier 1 — what the results now force
+
+> **Added 2026-09-11, after exp7 (§2.9.7).** Items 1 and 2 below are superseded in part: the
+> multivariate result is real but belongs to the *random* encoder, not the trained one. What
+> exp7 forces, in order:
+>
+> 0a. **exp8 — a featuriser ladder.** Same pipeline (64-D-ish feature → C2ST, redrawn
+>     partitions), featurisers ordered by how much they know about images: per-channel colour
+>     moments (6-D, knows nothing) → random projection of raw pixels (no convolution) →
+>     random conv encoder (this) → trained AE → pretrained ImageNet network features. It says
+>     *what* the untrained encoder is detecting. If colour moments match it, CIFAR-10 vs
+>     CIFAR-100 is a low-level-statistics difference and the story is about C2ST, not the
+>     featuriser. If pretrained features beat it, the random encoder is a cheap baseline
+>     rather than a finding. Either way it is the comparison a reviewer asks for first. The
+>     colour-moment and random-pixel scorers need an image pass; CIFAR at 32 px is minutes.
+> 0b. **More random seeds, and the quantiser.** Three seeds spread 72–94% at n = 500. Ten would
+>     say whether the untrained advantage is a property of the architecture or of lucky
+>     draws — and scoring the *unquantised* random features would say whether the sign
+>     quantiser helps or hurts.
+> 0c. **Replace `control-disjoint` with a redrawn partition** (§2.9.8) in `common.py`, and
+>     re-run exp1's calibration row under it.
+> 0d. **A comparison between the one-class and CIFAR-100 difficulty levels.** One-class
+>     saturates at 100% for every encoder and CIFAR-10 vs CIFAR-100 separates them; the
+>     contamination sweep (exp2) at the 64-D code would give the missing intermediate rungs.
 
 The §2b suite answered questions 1 and 6 of the previous list. What it forces instead:
 
