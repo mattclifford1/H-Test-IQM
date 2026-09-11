@@ -513,6 +513,113 @@ def fig8_code_origin():
     _save(fig, 'fig8_code_origin')
 
 
+# --- fig 9 -------------------------------------------------------------------------------
+# rungs grouped by family: pixel statistics (browns), the autoencoder (greens), ResNet (blues)
+RUNG_STYLE = {
+    '1': ('#a6761d', '-'), '2': ('#e6ab02', '-'),
+    '3': ('#1b9e77', '-'), '3q': ('#1b9e77', ':'),
+    '4': ('#66a61e', '-'), '4q': ('#66a61e', ':'),
+    '5': ('#7570b3', '-'), '5m': ('#7570b3', ':'),
+    '6': ('#1f3a93', '-'), '6m': ('#1f3a93', ':'),
+    'ref': ('#1f77b4', '-'),
+}
+RUNG_ORDER = ['ref', '2', '1', '3q', '4', '4q', '5', '5m', '3', '6', '6m']
+
+
+def fig9_featuriser_ladder():
+    '''
+    exp8: the same C2ST on featurisers ordered by how much they know about images. One line
+    per rung (the mean of its seeds or channel subsets, with their range shaded), so the ladder
+    reads bottom to top. Dotted = the unquantised or 64-channel variant of the solid rung.
+    '''
+    d = _load('exp8_featuriser_ladder.csv')
+    if d is None:
+        print('  skip fig9 -- no exp8_featuriser_ladder.csv')
+        return
+    names = d.drop_duplicates('rung').set_index('rung').rung_name
+
+    fig = plt.figure(figsize=(8.6, 7.2))
+    gs = fig.add_gridspec(2, 2, height_ratios=[1.15, 1])
+    ax = fig.add_subplot(gs[0, :])
+
+    # (a) power curves
+    pr = d[d.part == 'primary']
+    for rung in RUNG_ORDER:
+        cell = pr[pr.rung == rung]
+        if not len(cell):
+            continue
+        g = cell.groupby('n').detect
+        colour, ls = RUNG_STYLE[rung]
+        ref = rung == 'ref'
+        ax.plot(g.mean().index, g.mean() * 100, marker='o', ms=3, color=colour, ls=ls,
+                lw=3.4 if ref else 1.6, alpha=0.35 if ref else 1.0,
+                label=f'{rung:>3s}  {names[rung]}')
+        if cell.member.nunique() > 1:
+            ax.fill_between(g.min().index, g.min() * 100, g.max() * 100, color=colour,
+                            alpha=0.12, lw=0)
+    ax.axhline(80, color='k', ls=':', lw=0.8)
+    ax.axhline(ALPHA * 100, color='k', ls='--', lw=0.8)
+    sizes = sorted(pr.n.unique())
+    ax.set_xscale('log')
+    ax.set_xticks(sizes)
+    ax.set_xticklabels([str(n) for n in sizes])
+    ax.minorticks_off()
+    ax.set_ylim(-3, 103)
+    ax.set_xlabel('images per side ($n$)')
+    ax.set_ylabel('detection rate (%)')
+    ax.set_title('(a) CIFAR-10 vs CIFAR-100: the featuriser ladder, 200 repeats per cell',
+                 fontsize=9)
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[::-1], labels[::-1], loc='center left', bbox_to_anchor=(1.01, 0.5),
+              fontsize=7.5, handlelength=2.6)
+
+    # (b) class drop
+    cd = d[(d.part == 'classdrop')]
+    ax = fig.add_subplot(gs[1, 0])
+    rungs = [r for r in RUNG_ORDER if r in set(cd.rung)]
+    for i, rung in enumerate(rungs):
+        c9 = cd[(cd.rung == rung) & (cd.k_classes == 9)]
+        c10 = cd[(cd.rung == rung) & (cd.k_classes == 10)]
+        colour, ls = RUNG_STYLE[rung]
+        m = c9.detect.mean() * 100
+        ax.bar(i, m, color=colour, alpha=0.35 if rung == 'ref' else 1.0,
+               hatch='///' if ls == ':' else None, edgecolor='white', width=0.75)
+        ax.errorbar(i, m, yerr=[[m - c9.detect_lo.min() * 100], [c9.detect_hi.max() * 100 - m]],
+                    color='k', lw=0.8, capsize=2)
+        ax.plot(i, c10.detect.mean() * 100, marker='_', ms=10, mew=2, color='k')
+    ax.axhline(ALPHA * 100, color='k', ls='--', lw=0.8)
+    ax.set_xticks(range(len(rungs)))
+    ax.set_xticklabels(rungs, fontsize=8)
+    ax.set_xlabel('rung')
+    ax.set_ylabel('detection rate (%)')
+    ax.set_ylim(0, 65)
+    ax.set_title('(b) drop 1 of 10 classes, $n=2000$\nbar = $k=9$, tick = $k=10$ null',
+                 fontsize=9)
+
+    # (c) calibration under the redrawn null
+    nl = d[d.part == 'null_redrawn']
+    ax = fig.add_subplot(gs[1, 1])
+    for i, rung in enumerate(rungs):
+        cell = nl[nl.rung == rung]
+        colour, _ = RUNG_STYLE[rung]
+        offs = np.linspace(-0.25, 0.25, len(cell)) if len(cell) > 1 else [0.0]
+        for off, (_, r) in zip(offs, cell.iterrows()):
+            ax.errorbar(i + off, r.detect * 100,
+                        yerr=[[100 * (r.detect - r.detect_lo)], [100 * (r.detect_hi - r.detect)]],
+                        fmt='o', ms=3.5, color=colour, capsize=1.5, lw=0.9)
+    ax.axhline(ALPHA * 100, color='k', ls='--', lw=0.8)
+    ax.set_xticks(range(len(rungs)))
+    ax.set_xticklabels(rungs, fontsize=8)
+    ax.set_xlabel('rung')
+    ax.set_ylim(0, 10)
+    ax.set_ylabel('false-positive rate (%)')
+    ax.set_title('(c) calibration: redrawn null, $n=1000$\n1000 repeats per featuriser',
+                 fontsize=9)
+
+    fig.tight_layout()
+    _save(fig, 'fig9_featuriser_ladder')
+
+
 FIGURES = {
     'fig1': fig1_power_curve,
     'fig2': fig2_contamination,
@@ -522,6 +629,7 @@ FIGURES = {
     'fig6': fig6_calibration,
     'fig7': fig7_multivariate,
     'fig8': fig8_code_origin,
+    'fig9': fig9_featuriser_ladder,
 }
 
 

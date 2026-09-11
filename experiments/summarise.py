@@ -259,6 +259,71 @@ def exp7():
         print(t.to_string(float_format=lambda v: f'{v*100:.1f}'))
 
 
+def exp8():
+    d = _load('exp8_featuriser_ladder.csv')
+    if d is None:
+        return
+    _head('EXP 8 -- FEATURISER LADDER: what is the untrained encoder detecting?')
+    order = ['ref', '2', '1', '3q', '4', '4q', '5', '3', '5m', '6', '6m']
+    names = d.drop_duplicates('rung').set_index('rung').rung_name
+
+    nul = d[d.part == 'null_redrawn']
+    print('\n-- null, CIFAR-10 vs CIFAR-10, redrawn partition, n = 1000, 1000 repeats --')
+    for _, r in nul.iterrows():
+        flag = '' if r.detect_lo <= ALPHA <= r.detect_hi else '   <-- excludes 5%'
+        print(f'  rung {r.rung:3s} {r.member:8s} {r.detect:6.1%} '
+              f'[{r.detect_lo:.4f}, {r.detect_hi:.4f}]{flag}')
+
+    pr = d[d.part == 'primary']
+    print('\n-- CIFAR-10 vs CIFAR-100: detection rate (%), rung means (members in brackets) --')
+    for rung in order:
+        cell = pr[pr.rung == rung]
+        if not len(cell):
+            continue
+        line = f'  {rung:3s} {names[rung]:30s}'
+        for n, c in cell.groupby('n'):
+            mem = '/'.join(f'{v*100:.0f}' for v in c.detect)
+            line += f'  n={n:<4d} {c.detect.mean()*100:5.1f}' + (f' ({mem})' if len(c) > 1 else '')
+        print(line)
+
+    print('\n-- C2ST accuracy on CIFAR-10 vs CIFAR-100 (rung means) --')
+    t = pr[pr.test == 'C2ST'].groupby(['rung', 'n']).effect_mean.mean().unstack()
+    print(t.reindex([r for r in order if r in t.index]).to_string(float_format=FMT))
+
+    cd = d[d.part == 'classdrop']
+    print('\n-- class drop, n = 2000, redrawn: detection at k = 9 and the k = 10 null (%) --')
+    for rung in order:
+        c9 = cd[(cd.rung == rung) & (cd.k_classes == 9)]
+        c10 = cd[(cd.rung == rung) & (cd.k_classes == 10)]
+        if not len(c9):
+            continue
+        print(f'  {rung:3s} {names[rung]:30s} k=9 {c9.detect.mean()*100:5.1f} '
+              f'[{c9.detect_lo.min()*100:.1f}, {c9.detect_hi.max()*100:.1f}]'
+              f'  k=10 {c10.detect.mean()*100:4.1f}')
+
+    # the registered predictions, at n = 500
+    m = pr[pr.n == 500].groupby('rung').detect
+    lo, hi = m.min(), m.max()
+    mean = m.mean()
+
+    def ahead(a, b):
+        gap = 100 * (mean[a] - mean[b])
+        every = lo[a] > hi[b]
+        return f'{mean[a]:.1%} vs {mean[b]:.1%} ({gap:+.1f} pts), every member ahead: {every}'
+    print('\n-- the registered predictions, n = 500 --')
+    print('  P1  rung 6 vs 3   :', ahead('6', '3'), '| matched 64-D 6m vs 3:', ahead('6m', '3'))
+    print('  P2  rung 3 vs 1   :', ahead('3', '1'))
+    print('  P3  rung 3 vs 2   :', ahead('3', '2'))
+    print('  P4  rung 6 vs 5   :', ahead('6', '5'), '| matched 64-D 6m vs 5m:', ahead('6m', '5m'))
+    print('  Q   quantiser     : untrained occupancy vs activation', ahead('3', '3q'))
+    print('                      natural occupancy vs activation  ', ahead('4', '4q'))
+    j = cd[(cd.rung == 'ref') & (cd.k_classes == 9)].iloc[0]
+    r6 = cd[(cd.rung == '6') & (cd.k_classes == 9)].iloc[0]
+    print(f'  P5  class drop    : rung 6 {r6.detect:.1%} [{r6.detect_lo:.3f}, {r6.detect_hi:.3f}] '
+          f'vs JPEG {j.detect:.1%} [{j.detect_lo:.3f}, {j.detect_hi:.3f}] '
+          f'(registered JPEG reference 32.2% [0.283, 0.364])')
+
+
 # --- the first pass, kept for the record -----------------------------------------------
 def prior():
     d = _load('density_grid.csv', prior=True)
@@ -285,7 +350,7 @@ def prior():
 
 
 SECTIONS = {'exp1': exp1, 'exp2': exp2, 'exp3': exp3, 'exp4': exp4,
-            'exp5': exp5, 'exp6': exp6, 'exp7': exp7, 'prior': prior}
+            'exp5': exp5, 'exp6': exp6, 'exp7': exp7, 'exp8': exp8, 'prior': prior}
 
 
 def main():

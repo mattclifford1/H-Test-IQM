@@ -703,6 +703,84 @@ entropy-2-ssim-u-64d    13.6  3.2   48.2  3.4
 jpeg_bytes               NaN  NaN   32.2  5.0
 
 ==============================================================================
+EXP 8 -- FEATURISER LADDER: what is the untrained encoder detecting?
+==============================================================================
+
+-- null, CIFAR-10 vs CIFAR-10, redrawn partition, n = 1000, 1000 repeats --
+  rung 1   colour     5.1% [0.0390, 0.0664]
+  rung 2   s0         4.4% [0.0329, 0.0586]
+  rung 2   s1         6.1% [0.0478, 0.0776]
+  rung 2   s2         4.5% [0.0338, 0.0597]
+  rung 3   s0         4.6% [0.0347, 0.0608]
+  rung 3   s1         4.3% [0.0321, 0.0574]
+  rung 3   s2         4.4% [0.0329, 0.0586]
+  rung 3q  s0         5.6% [0.0434, 0.0720]
+  rung 3q  s1         4.0% [0.0295, 0.0540]
+  rung 3q  s2         4.7% [0.0355, 0.0619]
+  rung 4   mse        4.2% [0.0312, 0.0563]
+  rung 4q  mse        4.3% [0.0321, 0.0574]
+  rung 5   s0         4.0% [0.0295, 0.0540]
+  rung 5   s1         4.3% [0.0321, 0.0574]
+  rung 5   s2         5.3% [0.0407, 0.0687]
+  rung 5m  s0         4.6% [0.0347, 0.0608]
+  rung 5m  s1         6.2% [0.0487, 0.0787]
+  rung 5m  s2         5.4% [0.0416, 0.0698]
+  rung 6   imagenet   4.0% [0.0295, 0.0540]
+  rung 6m  sub0       5.1% [0.0390, 0.0664]
+  rung 6m  sub1       5.8% [0.0451, 0.0742]
+  rung 6m  sub2       5.4% [0.0416, 0.0698]
+  rung ref jpeg       6.3% [0.0495, 0.0798]
+
+-- CIFAR-10 vs CIFAR-100: detection rate (%), rung means (members in brackets) --
+  ref JPEG bytes (scalar KS)          n=100    3.0  n=250   10.0  n=500   12.5  n=1000  14.5
+  2   random pixel projection         n=100    7.7 (10/7/6)  n=250   11.0 (10/8/14)  n=500   21.7 (22/18/24)  n=1000  49.3 (52/46/50)
+  1   colour moments                  n=100    8.5  n=250   17.0  n=500   29.0  n=1000  52.5
+  3q  untrained AE (activation)       n=100   12.2 (13/12/12)  n=250   23.8 (29/22/21)  n=500   50.8 (56/46/51)  n=1000  90.3 (92/88/90)
+  4   natural AE mse-2 (occupancy)    n=100   11.5  n=250   23.0  n=500   54.0  n=1000  89.0
+  4q  natural AE mse-2 (activation)   n=100   14.0  n=250   29.0  n=500   65.5  n=1000  97.0
+  5   untrained ResNet-18 (512)       n=100   13.8 (10/18/13)  n=250   42.7 (44/43/42)  n=500   76.0 (80/76/72)  n=1000  98.7 (100/98/98)
+  3   untrained AE (occupancy)        n=100   16.0 (20/16/12)  n=250   43.8 (46/48/37)  n=500   80.7 (93/82/68)  n=1000  99.5 (100/100/98)
+  5m  untrained ResNet-18 (64 ch)     n=100   15.8 (17/16/14)  n=250   37.8 (36/38/40)  n=500   84.2 (84/89/80)  n=1000  99.0 (98/100/98)
+  6   ImageNet ResNet-18 (512)        n=100   88.5  n=250   99.5  n=500  100.0  n=1000 100.0
+  6m  ImageNet ResNet-18 (64 ch)      n=100   54.2 (53/48/61)  n=250   98.0 (98/96/100)  n=500  100.0 (100/100/100)  n=1000 100.0 (100/100/100)
+
+-- C2ST accuracy on CIFAR-10 vs CIFAR-100 (rung means) --
+n      100    250    500    1000
+rung                            
+2    0.5101 0.5152 0.5191 0.5260
+1    0.5125 0.5185 0.5220 0.5280
+3q   0.5214 0.5290 0.5378 0.5473
+4    0.5214 0.5329 0.5413 0.5476
+4q   0.5284 0.5385 0.5428 0.5527
+5    0.5323 0.5465 0.5547 0.5667
+3    0.5323 0.5492 0.5611 0.5746
+5m   0.5323 0.5449 0.5611 0.5735
+6    0.6513 0.6766 0.6885 0.6950
+6m   0.5907 0.6287 0.6532 0.6741
+
+-- class drop, n = 2000, redrawn: detection at k = 9 and the k = 10 null (%) --
+  ref JPEG bytes (scalar KS)         k=9  29.4 [25.6, 33.5]  k=10  4.0
+  2   random pixel projection        k=9  15.0 [11.6, 19.0]  k=10  3.5
+  1   colour moments                 k=9  24.6 [21.0, 28.6]  k=10  3.8
+  3q  untrained AE (activation)      k=9  25.9 [21.6, 30.4]  k=10  5.2
+  4   natural AE mse-2 (occupancy)   k=9  15.6 [12.7, 19.0]  k=10  5.6
+  4q  natural AE mse-2 (activation)  k=9  22.8 [19.3, 26.7]  k=10  3.8
+  5   untrained ResNet-18 (512)      k=9  13.3 [9.3, 18.4]  k=10  3.6
+  3   untrained AE (occupancy)       k=9  18.5 [13.6, 24.4]  k=10  4.2
+  5m  untrained ResNet-18 (64 ch)    k=9  15.3 [11.1, 20.5]  k=10  4.5
+  6   ImageNet ResNet-18 (512)       k=9  42.4 [38.1, 46.8]  k=10  4.6
+  6m  ImageNet ResNet-18 (64 ch)     k=9  53.1 [45.2, 59.7]  k=10  4.7
+
+-- the registered predictions, n = 500 --
+  P1  rung 6 vs 3   : 100.0% vs 80.7% (+19.3 pts), every member ahead: True | matched 64-D 6m vs 3: 100.0% vs 80.7% (+19.3 pts), every member ahead: True
+  P2  rung 3 vs 1   : 80.7% vs 29.0% (+51.7 pts), every member ahead: True
+  P3  rung 3 vs 2   : 80.7% vs 21.7% (+59.0 pts), every member ahead: True
+  P4  rung 6 vs 5   : 100.0% vs 76.0% (+24.0 pts), every member ahead: True | matched 64-D 6m vs 5m: 100.0% vs 84.2% (+15.8 pts), every member ahead: True
+  Q   quantiser     : untrained occupancy vs activation 80.7% vs 50.8% (+29.8 pts), every member ahead: True
+                      natural occupancy vs activation   54.0% vs 65.5% (-11.5 pts), every member ahead: False
+  P5  class drop    : rung 6 42.4% [0.381, 0.468] vs JPEG 29.4% [0.256, 0.335] (registered JPEG reference 32.2% [0.283, 0.364])
+
+==============================================================================
 PRIOR PASS (results/prior/) -- single-draw main table, n=4000, 256px
 ==============================================================================
 scorer               entropy-2-mse  jpeg_bytes  pixel_std  pixel_entropy  BRISQUE
