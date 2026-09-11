@@ -10,7 +10,8 @@ from h_test_IQM.scorers.torch_scorers import base_scorer_torch
 
 
 class entropy_encoder_model(base_scorer_torch):
-    def setup(self, metric='mse', dist='natural', centers=2, spacial=False, seed=0):
+    def setup(self, metric='mse', dist='natural', centers=2, spacial=False, seed=0,
+              code='occupancy'):
        # checks
         if metric not in ['mse', 'ssim', 'nlpd']:
             raise ValueError(
@@ -21,8 +22,14 @@ class entropy_encoder_model(base_scorer_torch):
         if centers not in [2, 5]:
             raise ValueError(
                 'Invalid number of centers, needs to be one of: 2, 5')
+        if code not in ['occupancy', 'activation']:
+            raise ValueError("code must be 'occupancy' or 'activation'")
         self.centers = centers
         self.spacial = spacial
+        # 'activation' skips the quantiser: the per-channel spatial mean of the encoder's
+        # raw output, a 64-vector like the spacial occupancy. Used to ask whether the sign
+        # quantisation helps or costs detection power (exp8).
+        self.code = code
 
         if dist == 'random':
             # the untrained control: same architecture, no checkpoint. The encoder ends in a
@@ -55,6 +62,10 @@ class entropy_encoder_model(base_scorer_torch):
         self.model.to(self.device)
 
     def get_score(self, x):
+        if self.code == 'activation':
+            with torch.no_grad():
+                y = self.model.encode(x)
+            return y.reshape(y.shape[0], y.shape[1], -1).mean(dim=2).cpu().numpy()
         if self.spacial == False:
             return self.counts_per_emb_feature_flat(x)
         else:
