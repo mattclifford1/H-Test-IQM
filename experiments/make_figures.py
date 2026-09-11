@@ -424,8 +424,9 @@ def fig8_code_origin():
         print('  skip fig8 -- needs exp7_code_origin.csv and exp7_diagnostics.csv')
         return
 
-    fig, axes = plt.subplots(1, 4, figsize=(13, 3.5),
-                             gridspec_kw=dict(width_ratios=[1, 1, 1.1, 1.1]))
+    # 2 x 2 so it stays legible at a single column width in the write-up
+    fig, axes = plt.subplots(2, 2, figsize=(8.6, 7.0))
+    axes = axes.ravel()
     sizes = sorted(d[d.part == 'primary'].n.unique())
 
     def _lines(ax, comp, value, reference=True):
@@ -506,9 +507,9 @@ def fig8_code_origin():
     handles = [Line2D([], [], color=GROUP_COLOURS[g], lw=3.4 if g == 'reference' else 1.4,
                       alpha=0.35 if g == 'reference' else 1.0, label=GROUP_LABEL[g])
                for g in ('natural', 'noise', 'random', 'reference')]
-    fig.tight_layout(rect=(0, 0.08, 1, 1))
-    fig.legend(handles=handles, loc='lower center', ncol=4, bbox_to_anchor=(0.5, -0.01),
-               fontsize=8)
+    fig.tight_layout(rect=(0, 0.06, 1, 1), h_pad=1.5)
+    fig.legend(handles=handles, loc='lower center', ncol=2, bbox_to_anchor=(0.5, -0.005),
+               fontsize=8.5)
     _save(fig, 'fig8_code_origin')
 
 
