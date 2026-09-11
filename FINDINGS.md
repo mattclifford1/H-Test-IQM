@@ -741,10 +741,10 @@ unquantised version wins for both. No account is offered; it is recorded.
   n = 100 (54% vs 89%). The logistic C2ST trains on n rows, so its regularisation is doing
   real work and has never been tuned. Any featuriser comparison is partly a comparison of
   how well a fixed classifier copes with that featuriser's dimension.
-- **Relation to prior work.** A C2ST on pretrained deep features is, as far as I recall, the
-  setting of Lopez-Paz & Oquab, *Revisiting classifier two-sample tests* (ICLR 2017) — so rung
-  6's strength is expected rather than a discovery. **To verify and cite.** What this study
-  adds is the calibration, the sample-size characterisation, and the negative result for
+- **Relation to prior work — verified.** A C2ST on pretrained deep features is exactly the
+  setting of Lopez-Paz & Oquab, *Revisiting Classifier Two-Sample Tests*, ICLR 2017
+  (arXiv:1610.06545) — so rung 6's strength is expected rather than a discovery. What this
+  study adds is the calibration, the sample-size characterisation, and the negative result for
   reconstruction-trained perceptual features.
 
 **What it means for the project.** The perceptual autoencoder is dominated on every
@@ -1015,8 +1015,10 @@ Then, in the second pass (§2b):
 > 3. **A stronger pretrained rung.** ResNet-18 already saturates at n = 250; one self-supervised
 >    featuriser (e.g. a DINO/CLIP image encoder, if available offline) and a larger supervised
 >    one would say whether the ceiling is the featuriser or the comparison.
-> 4. **Check and cite the prior art** (Lopez-Paz & Oquab 2017 and the FID/two-sample-testing
->    literature) before writing any framing sentence.
+> 4. **Cite the prior art.** Verified: Lopez-Paz & Oquab, *Revisiting Classifier Two-Sample
+>    Tests*, ICLR 2017 (arXiv:1610.06545) is exactly rung 6's setting — cited in FINDINGS §2.9.9
+>    and the Densities draft §caveats. The wider FID/two-sample-testing literature is still
+>    unchecked.
 
 The §2b suite answered questions 1 and 6 of the previous list. What it forces instead:
 
