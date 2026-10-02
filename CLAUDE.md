@@ -212,3 +212,9 @@ Match what is there: plain functions and small ABC + registry-dict classes, no f
 annotations, `snake_case`, module-level `if __name__ == '__main__':` blocks used as smoke tests.
 Comments are sparse and explain *why*. Do not add a config system, a CLI, or a class hierarchy —
 the notebooks are the interface.
+
+## Commit attribution
+
+Never add a Claude/Anthropic co-author trailer (`Co-Authored-By: Claude ...`,
+`Claude-Session: ...`) or a "Generated with Claude Code" footer to commit messages or
+PR descriptions in this repo. This overrides the default attribution-line instructions.
